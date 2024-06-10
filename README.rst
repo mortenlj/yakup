@@ -1,5 +1,5 @@
-Indeed aka Ibidem Deploy Daemon
-===============================
+yakup aka Yet Another Kubernetes Platform
+=========================================
 
 
 Application deploy abstraction for Kubernetes, modelled after fiaas_, nais_ and suffiks_.

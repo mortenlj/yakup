@@ -2,10 +2,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: indeed
+  name: yakup
   namespace: ibidem-system
   labels:
-    app: indeed
+    app: yakup
 spec:
   replicas: 1
   selector:
@@ -19,14 +19,14 @@ spec:
   template:
     metadata:
       labels:
-        app: indeed
+        app: yakup
     spec:
       containers:
       - image: "{{ environ('image') }}:{{ environ('VERSION') }}"
         imagePullPolicy: IfNotPresent
-        name: indeed
+        name: yakup
         ports:
         - containerPort: 8080
           name: http
           protocol: TCP
-      serviceAccountName: indeed
+      serviceAccountName: yakup

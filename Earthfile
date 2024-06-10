@@ -15,7 +15,7 @@ prepare:
     ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=/usr/bin/aarch64-linux-gnu-gcc
     ENV CC_aarch64_unknown_linux_musl=/usr/bin/aarch64-linux-gnu-gcc
 
-    SAVE IMAGE --push ghcr.io/mortenlj/indeed/cache:prepare
+    SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:prepare
 
 chef-planner:
     FROM +prepare
@@ -28,7 +28,7 @@ chef-cook:
     COPY +chef-planner/recipe.json recipe.json
     ARG target
     RUN cargo chef cook --recipe-path recipe.json --release --target ${target}
-    SAVE IMAGE --push ghcr.io/mortenlj/indeed/cache:chef-cook-${target}
+    SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:chef-cook-${target}
 
 build:
     FROM +chef-cook
@@ -40,8 +40,8 @@ build:
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     RUN cargo build --bin controller --release --target ${target}
 
-    SAVE ARTIFACT target/${target}/release/controller indeed
-    SAVE IMAGE --push ghcr.io/mortenlj/indeed/cache:build-${target}
+    SAVE ARTIFACT target/${target}/release/controller yakup
+    SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:build-${target}
 
 crd:
     FROM +chef-cook --target=x86_64-unknown-linux-musl
@@ -59,15 +59,15 @@ docker:
 
     WORKDIR /bin
     ARG target=x86_64-unknown-linux-musl
-    COPY --platform=linux/amd64 (+build/indeed --target=$target) indeed
+    COPY --platform=linux/amd64 (+build/yakup --target=$target) yakup
 
     CMD ["/bin/suffiks-ingress"]
 
     # builtins must be declared
     ARG EARTHLY_GIT_SHORT_HASH
 
-    ARG REGISTRY=ghcr.io/mortenlj/indeed
-    ARG image=${REGISTRY}/indeed
+    ARG REGISTRY=ghcr.io/mortenlj/yakup
+    ARG image=${REGISTRY}/yakup
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     SAVE IMAGE --push ${image}:${VERSION} ${image}:latest
 
@@ -80,9 +80,9 @@ manifests:
 
     # builtins must be declared
     ARG EARTHLY_GIT_SHORT_HASH
-    ARG REGISTRY=mortenlj/indeed
+    ARG REGISTRY=mortenlj/yakup
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
-    ARG image=${REGISTRY}/indeed
+    ARG image=${REGISTRY}/yakup
 
     FOR template IN $(ls /templates/*.yaml)
         RUN cat ${template} >> ./deploy.yaml

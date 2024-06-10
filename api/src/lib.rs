@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 
 #[derive(CustomResource, Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 #[kube(
-    group = "indeed.ibidem.no",
+    group = "yakup.ibidem.no",
     version = "v1",
     kind = "Application",
     namespaced,
