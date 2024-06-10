@@ -1,0 +1,32 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: indeed
+  namespace: ibidem-system
+  labels:
+    app: indeed
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: suffiks-ingress
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: indeed
+    spec:
+      containers:
+      - image: "{{ environ('image') }}:{{ environ('VERSION') }}"
+        imagePullPolicy: IfNotPresent
+        name: indeed
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+      serviceAccountName: indeed

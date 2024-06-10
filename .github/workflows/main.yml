@@ -1,0 +1,110 @@
+name: Build and deploy
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+on:
+  push:
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io/${{ github.repository }}
+
+jobs:
+  setup:
+    name: Set variables
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # ratchet:actions/checkout@v3
+      - name: "Set image version"
+        id: constants
+        run: |
+          export version="$(date +%Y%m%d%H%M%S)-$(git describe --always --dirty --exclude '*')"
+          echo "VERSION=${version}" >> ${GITHUB_OUTPUT}
+    outputs:
+      VERSION: "${{ steps.constants.outputs.VERSION }}"
+
+  build:
+    name: Build and push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    needs: setup
+    env:
+      VERSION: "${{ needs.setup.outputs.VERSION }}"
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # ratchet:actions/checkout@v3
+        with:
+          submodules: 'true'
+      - name: Login to GitHub Packages Docker Registry
+        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # ratchet:docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install earthly
+        uses: earthly/actions-setup@43211c7a0eae5344d6d79fb4aaf209c8f8866203 # ratchet:earthly/actions-setup@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and possibly push
+        env:
+          EARTHLY_PUSH: "${{ github.ref == 'refs/heads/main' }}"
+          EARTHLY_VERBOSE: true
+          EARTHLY_FULL_TARGET: true
+          EARTHLY_OUTPUT: true
+          EARTHLY_ORG: ${{ vars.EARTHLY_ORG }}
+          EARTHLY_SATELLITE: ${{ vars.EARTHLY_SATELLITE }}
+          EARTHLY_TOKEN: ${{ secrets.EARTHLY_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          earthly +deploy --VERSION=${VERSION} --REGISTRY=${REGISTRY}
+      - name: Save manifests for later deploy
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifests
+          path: deploy.yaml
+
+  deploy:
+    name: Deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs:
+      - setup
+      - build
+    steps:
+      - name: Download manifests from build
+        uses: actions/download-artifact@v4
+        with:
+          name: manifests
+      - name: Install and configure kubectl
+        run: |
+          mkdir -p /tmp/kubectl
+          cd /tmp/kubectl
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          curl -LO "https://dl.k8s.io/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
+          echo "$(<kubectl.sha256)  kubectl" | sha256sum --check
+          chmod +x kubectl
+          echo "${{ secrets.KUBECONFIG }}" > /tmp/kubectl/kubeconfig
+          echo "KUBECONFIG=/tmp/kubectl/kubeconfig" >> ${GITHUB_ENV}
+          echo "PATH=/tmp/kubectl:${PATH}" >> ${GITHUB_ENV}
+      - id: join-zt
+        name: Join ZeroTier network
+        uses: mortenlj/zerotier-actions/join-zt@main
+        with:
+          network_id: ${{ secrets.ZEROTIER_NETWORK_ID }}
+          api_accesstoken: ${{ secrets.ZEROTIER_API_ACCESSTOKEN }}
+          ping_target: k3s2.home.ibidem.no
+      - name: Run kubectl apply
+        run: |
+          kubectl apply --namespace=ibidem-system --filename=deploy.yaml --selector=app=indeed --prune=true --wait=true --timeout=60s
+      - name: Leave ZeroTier network
+        if: always()
+        uses: mortenlj/zerotier-actions/leave-zt@main
+        with:
+          node_id: ${{ steps.join-zt.outputs.node_id }}
+          network_id: ${{ secrets.ZEROTIER_NETWORK_ID }}
+          api_accesstoken: ${{ secrets.ZEROTIER_API_ACCESSTOKEN }}

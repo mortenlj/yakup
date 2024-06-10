@@ -23,6 +23,3 @@ Temporary Items
 
 # Rust
 target
-
-# Build and deploy artifacts
-deploy.yaml
