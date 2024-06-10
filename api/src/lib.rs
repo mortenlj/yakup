@@ -11,7 +11,7 @@ use schemars::JsonSchema;
     namespaced,
     status = "ApplicationStatus",
     shortname = "app",
-    doc = "Ibidem Deploy Daemon Application",
+    doc = "Yet Another Application Kind",
     printcolumn = r#"{"name":"Image","type":"string","jsonPath":".spec.image"}"#,
 )]
 #[serde(rename_all = "camelCase")]
