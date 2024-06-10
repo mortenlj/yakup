@@ -50,7 +50,7 @@ crd:
     # builtins must be declared
     ARG EARTHLY_GIT_SHORT_HASH
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
-    RUN cargo run --bin crd
+    RUN cargo run --bin crd --release --target x86_64-unknown-linux-musl
 
     SAVE ARTIFACT target/crd/application.yaml application.yaml
 
