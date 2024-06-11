@@ -74,7 +74,7 @@ docker:
     ARG target=${NATIVETARGET}
     COPY --platform=linux/amd64 (+build/yakup --target=${target}) yakup
 
-    CMD ["/bin/suffiks-ingress"]
+    CMD ["/bin/yakup"]
 
     # builtins must be declared
     ARG EARTHLY_GIT_SHORT_HASH
