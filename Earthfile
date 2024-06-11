@@ -31,15 +31,15 @@ prepare:
     SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:prepare
 
 chef-planner:
-    FROM +prepare
+    FROM +prepare --target=${NATIVETARGET}
     COPY --dir api controller Cargo.lock Cargo.toml .
     RUN cargo chef prepare --recipe-path recipe.json
     SAVE ARTIFACT recipe.json
 
 chef-cook:
-    FROM +prepare
-    COPY +chef-planner/recipe.json recipe.json
     ARG --required target
+    FROM +prepare --target=${target}
+    COPY +chef-planner/recipe.json recipe.json
     RUN cargo chef cook --recipe-path recipe.json --release --target ${target}
     SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:chef-cook-${target}
 
@@ -108,7 +108,7 @@ manifests:
     SAVE ARTIFACT ./deploy.yaml AS LOCAL deploy.yaml
 
 deploy:
-    BUILD --platform=linux/amd64 +prepare
+    BUILD --platform=linux/amd64 +prepare --target=${NATIVETARGET}
     BUILD --platform=linux/arm64 +docker --target=aarch64-unknown-linux-musl
     BUILD --platform=linux/amd64 +docker --target=x86_64-unknown-linux-musl
     BUILD +manifests
