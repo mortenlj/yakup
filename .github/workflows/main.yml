@@ -100,7 +100,6 @@ jobs:
           ping_target: k3s2.home.ibidem.no
       - name: Run kubectl apply
         run: |
-          kubectl config view --minify
           kubectl apply --namespace=ibidem-system --filename=deploy.yaml --selector=app=yakup --prune=true --wait=true --timeout=60s
       - name: Leave ZeroTier network
         if: always()
