@@ -65,7 +65,7 @@ crd:
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     RUN cargo run --bin crd --release --target ${NATIVETARGET}
 
-    SAVE ARTIFACT target/crd/application.yaml application.yaml
+    SAVE ARTIFACT target/crd/application.yaml AS LOCAL target/yaml/application.yaml
 
 docker:
     FROM cgr.dev/chainguard/static:latest
@@ -89,7 +89,6 @@ manifests:
     WORKDIR /manifests
 
     COPY deploy/* /templates
-    COPY --platform=linux/amd64 +crd/application.yaml /templates
 
     # builtins must be declared
     ARG EARTHLY_GIT_SHORT_HASH
@@ -105,10 +104,11 @@ manifests:
         RUN jinja2 ${template} >> ./deploy.yaml
     END
 
-    SAVE ARTIFACT ./deploy.yaml AS LOCAL deploy.yaml
+    SAVE ARTIFACT ./deploy.yaml AS LOCAL target/yaml/deploy.yaml
 
 deploy:
     BUILD --platform=linux/amd64 +prepare --target=${NATIVETARGET}
     BUILD --platform=linux/arm64 +docker --target=aarch64-unknown-linux-musl
     BUILD --platform=linux/amd64 +docker --target=x86_64-unknown-linux-musl
     BUILD +manifests
+    BUILD +crd
