@@ -80,9 +80,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: manifests
-      - name: Unpack manifests
-        run: |
-          tree
       - name: Install and configure kubectl
         run: |
           mkdir -p /tmp/kubectl
@@ -103,8 +100,8 @@ jobs:
           ping_target: k3s2.home.ibidem.no
       - name: Run kubectl apply
         run: |
-          kubectl apply --filename=target/yaml/application.yaml --wait=true --timeout=60s
-          kubectl apply --namespace=ibidem-system --filename=target/yaml/deploy.yaml --selector=app=yakup --prune=true --wait=true --timeout=60s
+          kubectl apply --filename=application.yaml --wait=true --timeout=60s
+          kubectl apply --namespace=ibidem-system --filename=deploy.yaml --selector=app=yakup --prune=true --wait=true --timeout=60s
       - name: Leave ZeroTier network
         if: always()
         uses: mortenlj/zerotier-actions/leave-zt@main
