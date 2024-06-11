@@ -80,6 +80,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: manifests
+      - name: Unpack manifests
+        run: |
+          unzip manifests.zip
+          ls -la .
       - name: Install and configure kubectl
         run: |
           mkdir -p /tmp/kubectl
