@@ -82,8 +82,7 @@ jobs:
           name: manifests
       - name: Unpack manifests
         run: |
-          unzip manifests.zip
-          ls -la .
+          tree
       - name: Install and configure kubectl
         run: |
           mkdir -p /tmp/kubectl
