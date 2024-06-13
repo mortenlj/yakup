@@ -18,9 +18,9 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 #[tokio::main]
 async fn main() -> Result<(), kube::Error> {
     let client = Client::try_default().await?;
-    let pods = Api::<Application>::all(client);
+    let apps = Api::<Application>::all(client);
 
-    Controller::new(pods.clone(), Default::default())
+    Controller::new(apps.clone(), Default::default())
         .run(reconcile, error_policy, Arc::new(()))
         .for_each(|_| futures::future::ready(()))
         .await;
