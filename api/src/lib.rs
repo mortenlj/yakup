@@ -16,10 +16,10 @@ use schemars::JsonSchema;
 )]
 #[serde(rename_all = "camelCase")]
 pub struct ApplicationSpec {
-    image: String,
+    pub image: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 pub struct ApplicationStatus {
-    conditions: Vec<Condition>,
+    pub conditions: Vec<Condition>,
 }
