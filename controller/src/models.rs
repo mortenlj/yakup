@@ -3,6 +3,7 @@ use std::sync::Arc;
 use k8s_openapi::api::apps::v1::Deployment;
 use kube::Api;
 use kube::api::PostParams;
+use tracing::log::{debug, info};
 
 const PP: PostParams = PostParams{ dry_run: false, field_manager: None };
 
@@ -28,10 +29,10 @@ impl Operation {
         let existing = api.get(&self.object.metadata.name.as_ref().unwrap().as_str()).await;
         match existing {
             Ok(deployment) => {
-                println!("Deployment {:?} already exists", deployment);
+                debug!("Deployment {:?} already exists", deployment);
                 match self.operation_type {
                     OperationType::CreateOrUpdate => {
-                        println!("replacing existing deployment");
+                        debug!("replacing existing deployment");
                         api.replace(&object_name, &PP, &self.object).await?;
                     }
                     OperationType::DeleteIfExists => {}
@@ -40,14 +41,14 @@ impl Operation {
             Err(e) => {
                 // TODO: Check for not found error before assuming
                 // Error: Api(ErrorResponse { status: "Failure", message: "deployments.apps \"test-deployment\" not found", reason: "NotFound", code: 404 })
-                println!("error getting deployment {}: {:?}", object_name, e);
+                info!("error getting deployment {}: {:?}", object_name, e);
                 match self.operation_type {
                     OperationType::CreateOrUpdate => {
-                        println!("attempting create");
+                        debug!("attempting create");
                         api.create(&PP, &self.object).await?;
                     }
                     OperationType::DeleteIfExists => {
-                        println!("assuming not found, skipping delete");
+                        debug!("assuming not found, skipping delete");
                     }
                 }
             }

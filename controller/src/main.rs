@@ -7,6 +7,9 @@ use kube::{Api, Client, ResourceExt};
 use kube::runtime::controller::Action;
 use kube::runtime::controller::Controller;
 use tokio;
+use tracing::{error, info};
+use tracing_subscriber::{EnvFilter, Registry};
+use tracing_subscriber::prelude::*;
 
 use api::Application;
 
@@ -22,6 +25,15 @@ pub struct Context {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let logger = tracing_subscriber::fmt::layer().json();
+    let env_filter = EnvFilter::try_from_default_env()
+        .or_else(|_| EnvFilter::try_new("info"))
+        .unwrap();
+    let collector = Registry::default().with(logger).with(env_filter);
+    tracing::subscriber::set_global_default(collector).unwrap();
+
+    info!("Starting controller");
+
     let client = Client::try_default().await?;
     let apps = Api::<Application>::all(client.clone());
     let deployments = Api::<Deployment>::all(client.clone());
@@ -36,15 +48,15 @@ async fn main() -> Result<()> {
 }
 
 async fn reconcile(obj: Arc<Application>, ctx: Arc<Context>) -> Result<Action> {
-    println!("reconcile request: {}", obj.name_any());
+    info!("reconcile request: {}", obj.name_any());
     let operations = resource_creator::process(obj).await?;
     for operation in operations.iter() {
         match operation.apply(ctx.client.clone()).await {
             Ok(_) => {
-                println!("Operation {:?} for resource {:?} applied successfully", operation.operation_type, operation.object);
+                info!("Operation {:?} for resource {:?} applied successfully", operation.operation_type, operation.object);
             },
             Err(e) => {
-                eprintln!("Error applying operation: {:?}", e);
+                error!("Error applying operation: {:?}", e);
                 return Ok(Action::requeue(Duration::from_secs(5)));
             }
         }
@@ -52,6 +64,7 @@ async fn reconcile(obj: Arc<Application>, ctx: Arc<Context>) -> Result<Action> {
     Ok(Action::requeue(Duration::from_secs(3600)))
 }
 
-fn error_policy(_object: Arc<Application>, _err: &kube::Error, _ctx: Arc<Context>) -> Action {
+fn error_policy(_object: Arc<Application>, err: &kube::Error, _ctx: Arc<Context>) -> Action {
+    error!("Error occurred during reconciliation: {:?}", err);
     Action::requeue(Duration::from_secs(5))
 }
