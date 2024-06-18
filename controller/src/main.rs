@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use futures::StreamExt;
 use k8s_openapi::api::apps::v1::Deployment;
+use k8s_openapi::kind;
 use kube::{Api, Client, ResourceExt};
 use kube::runtime::controller::Action;
 use kube::runtime::controller::Controller;
@@ -60,7 +61,7 @@ async fn reconcile(obj: Arc<Application>, ctx: Arc<Context>) -> Result<Action> {
     for operation in operations.iter() {
         match operation.apply(ctx.client.clone()).await {
             Ok(_) => {
-                info!("Operation {:?} for resource {:?} applied successfully", operation.operation_type, operation.object);
+                info!("Operation {:?} for {} {} applied successfully", operation.operation_type, kind(&*operation.object), operation.object.metadata.name.as_ref().unwrap());
             },
             Err(e) => {
                 error!("Error applying operation: {:?}", e);

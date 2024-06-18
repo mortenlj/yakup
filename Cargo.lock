@@ -267,6 +267,7 @@ name = "controller"
 version = "0.1.0"
 dependencies = [
  "api",
+ "either",
  "futures",
  "k8s-openapi",
  "kube",
