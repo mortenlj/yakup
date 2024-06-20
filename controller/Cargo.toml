@@ -7,7 +7,7 @@ authors = ["Morten Lied Johansen <mortenjo@ifi.uio.no>"]
 [dependencies]
 futures = "0.3.30"
 k8s-openapi = { version = "0.22.0", features = ["latest"] }
-kube = { version = "0.92.0", features = ["runtime"] }
+kube = { version = "0.92.1", features = ["runtime"] }
 thiserror = "1.0.61"
 tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
 api = { path = "../api"}
