@@ -33,10 +33,11 @@ async fn main() -> Result<()> {
         .or_else(|_| EnvFilter::try_new("info"))
         .unwrap();
     let telemetry = init_tracer().await;
+
+    info!("Starting controller with env_filter {:?} and telemetry {:?}", env_filter, telemetry.is_some());
     let collector = Registry::default().with(telemetry).with(logger).with(env_filter);
     tracing::subscriber::set_global_default(collector).unwrap();
 
-    info!("Starting controller");
 
     let client = Client::try_default().await?;
     let apps = Api::<Application>::all(client.clone());

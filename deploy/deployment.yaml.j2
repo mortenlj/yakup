@@ -25,6 +25,9 @@ spec:
       - image: "{{ environ('image') }}:{{ environ('VERSION') }}"
         imagePullPolicy: IfNotPresent
         name: yakup
+        env:
+          - name: OPENTELEMETRY_ENDPOINT_URL
+            value: "http://grafana-grafana-agent.grafana:4317"
         ports:
         - containerPort: 8080
           name: http
