@@ -1,3 +1,4 @@
+use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -7,9 +8,13 @@ use k8s_openapi::kind;
 use kube::{Api, Client, ResourceExt};
 use kube::runtime::controller::Action;
 use kube::runtime::controller::Controller;
+use opentelemetry::KeyValue;
+use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::trace::Tracer;
+use opentelemetry_semantic_conventions::resource;
 use tokio;
 use tracing::{error, field, info, instrument, Span};
+use tracing::level_filters::LevelFilter;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::{EnvFilter, Registry};
 use tracing_subscriber::prelude::*;
@@ -19,27 +24,44 @@ use api::Application;
 mod models;
 mod resource_creator;
 
-pub type Result<T, E = kube::Error> = std::result::Result<T, E>;
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("Config error")]
+    ConfigError
+}
+
+pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub struct Context {
     pub client: Client,
 }
 
-
 #[tokio::main]
 async fn main() -> Result<()> {
-    let logger = tracing_subscriber::fmt::layer().json();
+    let logger = tracing_subscriber::fmt::layer().compact();
     let env_filter = EnvFilter::try_from_default_env()
         .or_else(|_| EnvFilter::try_new("info"))
         .unwrap();
-    let telemetry = init_tracer().await;
+    match init_tracer().await {
+        Ok(telemetry) => {
+            let max_level_hint = env_filter.max_level_hint().unwrap_or(LevelFilter::OFF);
+            let log_msg = format!("Starting controller with log level {:?}", max_level_hint);
 
-    info!("Starting controller with env_filter {:?} and telemetry {:?}", env_filter, telemetry.is_some());
-    let collector = Registry::default().with(telemetry).with(logger).with(env_filter);
-    tracing::subscriber::set_global_default(collector).unwrap();
+            Registry::default()
+                .with(telemetry)
+                .with(logger)
+                .with(env_filter)
+                .init();
 
+            info!(log_msg);
+        }
+        Err(e) => {
+            error!("Error initializing OpenTelemetry: {:?}", e);
+            return Err(Error::ConfigError);
+        }
+    }
 
-    let client = Client::try_default().await?;
+    let client = Client::try_default().await.map_err(|_| Error::ConfigError)?;
     let apps = Api::<Application>::all(client.clone());
     let deployments = Api::<Deployment>::all(client.clone());
 
@@ -73,33 +95,34 @@ async fn reconcile(obj: Arc<Application>, ctx: Arc<Context>) -> Result<Action> {
     Ok(Action::requeue(Duration::from_secs(3600)))
 }
 
-fn error_policy(_object: Arc<Application>, err: &kube::Error, _ctx: Arc<Context>) -> Action {
+fn error_policy(_object: Arc<Application>, err: &Error, _ctx: Arc<Context>) -> Action {
     error!("Error occurred during reconciliation: {:?}", err);
     Action::requeue(Duration::from_secs(5))
 }
 
-async fn init_tracer() -> Option<OpenTelemetryLayer<Registry, Tracer>> {
-    if let Ok(otlp_endpoint) = std::env::var("OPENTELEMETRY_ENDPOINT_URL") {
-        let channel = tonic::transport::Channel::from_shared(otlp_endpoint)
-            .unwrap()
-            .connect()
-            .await
-            .unwrap();
-
-        let tracer = opentelemetry_otlp::new_pipeline()
-            .tracing()
-            .with_exporter(opentelemetry_otlp::new_exporter().tonic().with_channel(channel))
-            .with_trace_config(opentelemetry_sdk::trace::config().with_resource(
-                opentelemetry_sdk::Resource::new(vec![opentelemetry::KeyValue::new(
-                    "service.name",
+async fn init_tracer() -> Result<OpenTelemetryLayer<Registry, Tracer>> {
+    let otel_tracer = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_exporter(opentelemetry_otlp::new_exporter().tonic())
+        .with_trace_config(
+            opentelemetry_sdk::trace::config().with_resource(Resource::new(vec![
+                KeyValue::new(
+                    resource::K8S_CLUSTER_NAME,
+                    env::var("CLUSTER_NAME").unwrap_or("UNKNOWN_CLUSTER".to_string()),
+                ),
+                KeyValue::new(
+                    resource::K8S_NAMESPACE_NAME,
+                    env::var("NAMESPACE").unwrap_or("UNKNOWN_NAMESPACE".to_string()),
+                ),
+                KeyValue::new(
+                    resource::K8S_DEPLOYMENT_NAME,
                     "yakup",
-                )]),
-            ))
-            .install_batch(opentelemetry_sdk::runtime::Tokio)
-            .unwrap();
-        return Some(tracing_opentelemetry::layer().with_tracer(tracer))
-    }
-    None
+                ),
+                KeyValue::new(resource::SERVICE_NAME, env!("CARGO_BIN_NAME").to_string()),
+            ])),
+        )
+        .install_batch(opentelemetry_sdk::runtime::Tokio).map_err(|_| Error::ConfigError)?;
+    return Ok(tracing_opentelemetry::layer().with_tracer(otel_tracer));
 }
 
 pub fn get_trace_id() -> opentelemetry::trace::TraceId {
