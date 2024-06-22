@@ -105,7 +105,21 @@ async fn init_tracer() -> Result<OpenTelemetryLayer<Registry, Tracer>> {
         .tracing()
         .with_exporter(opentelemetry_otlp::new_exporter().tonic())
         .with_trace_config(
-            opentelemetry_sdk::trace::config(),
+            opentelemetry_sdk::trace::config().with_resource(Resource::new(vec![
+                KeyValue::new(
+                    resource::K8S_CLUSTER_NAME,
+                    env::var("CLUSTER_NAME").unwrap_or("UNKNOWN_CLUSTER".to_string()),
+                ),
+                KeyValue::new(
+                    resource::K8S_NAMESPACE_NAME,
+                    env::var("NAMESPACE").unwrap_or("UNKNOWN_NAMESPACE".to_string()),
+                ),
+                KeyValue::new(
+                    resource::K8S_DEPLOYMENT_NAME,
+                    "yakup",
+                ),
+                KeyValue::new(resource::SERVICE_NAME, env!("CARGO_BIN_NAME").to_string()),
+            ])),
         )
         .install_batch(opentelemetry_sdk::runtime::Tokio).map_err(|_| Error::ConfigError)?;
     return Ok(tracing_opentelemetry::layer().with_tracer(otel_tracer));
