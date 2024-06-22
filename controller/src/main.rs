@@ -85,7 +85,7 @@ async fn reconcile(obj: Arc<Application>, ctx: Arc<Context>) -> Result<Action> {
         match operation.apply(ctx.client.clone()).await {
             Ok(_) => {
                 info!("Operation {:?} for {} {} applied successfully", operation.operation_type, kind(&*operation.object), operation.object.metadata.name.as_ref().unwrap());
-            },
+            }
             Err(e) => {
                 error!("Error applying operation: {:?}", e);
                 return Ok(Action::requeue(Duration::from_secs(5)));
@@ -106,19 +106,8 @@ async fn init_tracer() -> Result<OpenTelemetryLayer<Registry, Tracer>> {
         .with_exporter(opentelemetry_otlp::new_exporter().tonic())
         .with_trace_config(
             opentelemetry_sdk::trace::config().with_resource(Resource::new(vec![
-                KeyValue::new(
-                    resource::K8S_CLUSTER_NAME,
-                    env::var("CLUSTER_NAME").unwrap_or("UNKNOWN_CLUSTER".to_string()),
-                ),
-                KeyValue::new(
-                    resource::K8S_NAMESPACE_NAME,
-                    env::var("NAMESPACE").unwrap_or("UNKNOWN_NAMESPACE".to_string()),
-                ),
-                KeyValue::new(
-                    resource::K8S_DEPLOYMENT_NAME,
-                    "yakup",
-                ),
-                KeyValue::new(resource::SERVICE_NAME, env!("CARGO_BIN_NAME").to_string()),
+                KeyValue::new(resource::K8S_DEPLOYMENT_NAME, "yakup"),
+                KeyValue::new(resource::SERVICE_NAME, "yakup"),
             ])),
         )
         .install_batch(opentelemetry_sdk::runtime::Tokio).map_err(|_| Error::ConfigError)?;
