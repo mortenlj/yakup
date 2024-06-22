@@ -27,7 +27,7 @@ spec:
         name: yakup
         env:
           - name: OTEL_EXPORTER_OTLP_ENDPOINT
-            value: "http://grafana-grafana-agent.grafana:4317"
+            value: "http://opentelemetry-collector.opentelemetry:4317"
         ports:
         - containerPort: 8080
           name: http
