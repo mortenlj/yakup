@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
+
 use k8s_openapi::api::apps::v1::Deployment;
 use k8s_openapi::api::core::v1::PodTemplateSpec;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta};
@@ -8,7 +9,7 @@ use tracing::instrument;
 
 use api::Application;
 
-use crate::models::{Operation, OperationType};
+use crate::models::Operation;
 use crate::resource_creator::to_dynamic_object;
 use crate::Result;
 
@@ -51,8 +52,7 @@ pub(crate) async fn process(app: Arc<Application>) -> Result<Vec<Operation>> {
         ..Default::default()
     };
 
-    Ok(vec![Operation {
-        operation_type: OperationType::CreateOrUpdate,
-        object: Arc::new(to_dynamic_object(deployment)?),
-    }])
+    Ok(vec![
+        Operation::CreateOrUpdate(Arc::new(to_dynamic_object(deployment)?))
+    ])
 }

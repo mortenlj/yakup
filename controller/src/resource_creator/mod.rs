@@ -4,7 +4,6 @@ use kube::api::DynamicObject;
 use kube::discovery::ApiResource;
 use kube::api::Resource;
 use kube::ResourceExt;
-use kube::runtime::reflector::Lookup;
 use tracing::instrument;
 
 use api::Application;

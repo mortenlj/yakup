@@ -81,9 +81,9 @@ async fn reconcile(obj: Arc<Application>, ctx: Arc<Context>) -> Result<Action> {
     let operations = resource_creator::process(obj).await?;
     for operation in operations.iter() {
         match operation.apply(ctx.client.clone()).await {
-            Ok(_) => {
-                let gvk = operation.gvk().await.map_err(|_| {Error::ConfigError})?;
-                info!("Operation {:?} for {} {} applied successfully", operation.operation_type, gvk.kind, operation.object.metadata.name.as_ref().unwrap());
+            Ok(object) => {
+                let gvk = operation.gvk(&object).await.map_err(|_| {Error::ConfigError})?;
+                info!("Operation {:?} for {} {} applied successfully", operation, gvk.kind, object.metadata.name.as_ref().unwrap());
             }
             Err(e) => {
                 error!("Error applying operation: {:?}", e);
