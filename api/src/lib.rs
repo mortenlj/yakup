@@ -40,6 +40,12 @@ pub enum PortKind {
     TCP,
 }
 
+impl Port {
+    pub fn name(self: &Self) -> String {
+        self.kind.to_string().to_lowercase()
+    }
+}
+
 impl Display for PortKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)

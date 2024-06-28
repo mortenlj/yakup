@@ -1,4 +1,6 @@
+use std::collections::BTreeMap;
 use std::sync::Arc;
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use k8s_openapi::serde::Serialize;
 use kube::api::DynamicObject;
 use kube::discovery::ApiResource;
@@ -12,10 +14,27 @@ use crate::models::Operation;
 use crate::{Error, Result};
 
 mod deployment;
+mod service;
 
 #[instrument()]
-pub async fn process(obj: Arc<Application>) -> Result<Vec<Operation>> {
-    deployment::process(obj).await
+pub async fn process(app: Arc<Application>) -> Result<Vec<Operation>> {
+    let app_name = app.name_any();
+    let namespace = app.namespace().unwrap_or("default".to_string());
+    let labels = BTreeMap::from([
+        ("app.kubernetes.io/name".to_string(), app_name.clone()),
+        ("app.kubernetes.io/managed-by".to_string(), "yakup".to_string()),
+    ]);
+    let object_meta = ObjectMeta {
+        name: Some(app_name.clone()),
+        namespace: Some(namespace.clone()),
+        labels: Some(labels.clone()),
+        ..Default::default()
+    };
+
+    let mut operations = Vec::new();
+    operations.extend(deployment::process(&app, object_meta.clone(), labels.clone()).await?);
+    operations.extend(service::process(&app, object_meta.clone(), labels.clone()).await?);
+    Ok(operations)
 }
 
 fn to_dynamic_object<K: Resource + ResourceExt + Serialize>(resource: K) -> Result<DynamicObject>
