@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use k8s_openapi::api::apps::v1::Deployment;
-use k8s_openapi::api::core::v1::PodTemplateSpec;
+use k8s_openapi::api::apps::v1::{Deployment, DeploymentSpec};
+use k8s_openapi::api::core::v1::{Container, PodSpec, PodTemplateSpec};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta};
 use kube::ResourceExt;
 use tracing::instrument;
@@ -27,7 +27,7 @@ pub(crate) async fn process(app: Arc<Application>) -> Result<Vec<Operation>> {
             namespace: Some(namespace.clone()),
             ..Default::default()
         },
-        spec: Some(k8s_openapi::api::apps::v1::DeploymentSpec {
+        spec: Some(DeploymentSpec {
             replicas: Some(1),
             selector: LabelSelector {
                 match_labels: Some(labels.clone()),
@@ -38,8 +38,8 @@ pub(crate) async fn process(app: Arc<Application>) -> Result<Vec<Operation>> {
                     labels: Some(labels.clone()),
                     ..Default::default()
                 }),
-                spec: Some(k8s_openapi::api::core::v1::PodSpec {
-                    containers: vec![k8s_openapi::api::core::v1::Container {
+                spec: Some(PodSpec {
+                    containers: vec![Container {
                         name: app_name.clone(),
                         image: Some(app.spec.image.clone()),
                         ..Default::default()
