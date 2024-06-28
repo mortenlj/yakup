@@ -57,3 +57,57 @@ where
 
     Ok(dynamic_object)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use k8s_openapi::api::apps::v1::{Deployment, DeploymentSpec};
+    use k8s_openapi::api::core::v1::{Service, ServiceSpec};
+    use pretty_assertions::assert_eq;
+    use rstest::*;
+    use assert_json_diff::assert_json_include;
+    use serde_json::json;
+
+    #[fixture]
+    fn deployment() -> Deployment {
+        Deployment {
+            metadata: ObjectMeta {
+                name: Some("test".to_string()),
+                ..Default::default()
+            },
+            spec: Some(DeploymentSpec {
+                replicas: Some(1),
+                ..Default::default()
+            }),
+            status: Default::default(),
+        }
+    }
+
+    #[fixture]
+    fn service() -> Service {
+        Service {
+            metadata: ObjectMeta {
+                name: Some("test".to_string()),
+                ..Default::default()
+            },
+            spec: Some(ServiceSpec {
+                external_name: Some("test".to_string()),
+                ..Default::default()
+            }),
+            status: Default::default()
+        }
+    }
+
+    #[rstest]
+    #[case::deployment(deployment(), json!({"spec": {"replicas": 1}}))]
+    #[case::service(service(), json!({"spec": {"externalName": "test"}}))]
+    fn to_dynamic_object_success<K: Resource + ResourceExt + Serialize + Clone>(#[case] object: K, #[case] expected: serde_json::Value)
+    where
+        K::DynamicType: Default,
+    {
+        let dynamic_object = to_dynamic_object(object.clone()).unwrap();
+        assert_eq!(&dynamic_object.metadata, object.meta(), "metadata mismatch");
+
+        assert_json_include!(actual: dynamic_object.data, expected: expected);
+    }
+}
