@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Condition;
 use k8s_openapi::serde::{Deserialize, Serialize};
 use kube::CustomResource;
@@ -17,9 +18,30 @@ use schemars::JsonSchema;
 #[serde(rename_all = "camelCase")]
 pub struct ApplicationSpec {
     pub image: String,
+    pub ports: Option<Vec<Port>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 pub struct ApplicationStatus {
     pub conditions: Vec<Condition>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+pub struct Port {
+    pub kind: PortKind,
+    pub port: u16,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+pub enum PortKind {
+    #[default]
+    HTTP,
+    Metrics,
+    TCP,
+}
+
+impl Display for PortKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
