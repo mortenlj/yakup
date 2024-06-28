@@ -32,7 +32,7 @@ prepare:
 
 chef-planner:
     FROM +prepare --target=${NATIVETARGET}
-    COPY --dir api controller Cargo.lock Cargo.toml .
+    COPY --dir api controller .config Cargo.lock Cargo.toml .
     RUN cargo chef prepare --recipe-path recipe.json
     SAVE ARTIFACT recipe.json
 
@@ -47,11 +47,12 @@ build:
     ARG --required target
     FROM +chef-cook --target=${target}
 
-    COPY --dir api controller Cargo.lock Cargo.toml .
+    COPY --dir api controller .config Cargo.lock Cargo.toml .
     # builtins must be declared
     ARG EARTHLY_GIT_SHORT_HASH
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     RUN cargo build --bin controller --release --target ${target}
+    RUN cargo nextest run --profile ci --release --target ${target}
 
     SAVE ARTIFACT target/${target}/release/controller yakup
     SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:build-${target}
@@ -59,7 +60,7 @@ build:
 crd:
     FROM +chef-cook --target=${NATIVETARGET}
 
-    COPY --dir api controller Cargo.lock Cargo.toml .
+    COPY --dir api controller .config Cargo.lock Cargo.toml .
     # builtins must be declared
     ARG EARTHLY_GIT_SHORT_HASH
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
