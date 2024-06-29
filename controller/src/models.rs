@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -18,6 +19,14 @@ pub enum Operation {
     DeleteIfExists(Arc<DynamicObject>),
 }
 
+impl Display for Operation {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Operation::CreateOrUpdate(_obj) => write!(f, "CreateOrUpdate"),
+            Operation::DeleteIfExists(_obj) => write!(f, "DeleteIfExists"),
+        }
+    }
+}
 
 impl Operation {
     pub async fn apply(self: &Self, client: Client) -> Result<Arc<DynamicObject>, Error> {
