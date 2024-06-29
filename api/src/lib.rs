@@ -35,8 +35,11 @@ pub struct Port {
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 pub enum PortKind {
     #[default]
+    #[serde(alias = "http")]
     HTTP,
+    #[serde(alias = "metrics")]
     Metrics,
+    #[serde(alias = "tcp")]
     TCP,
 }
 
