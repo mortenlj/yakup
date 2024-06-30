@@ -17,7 +17,7 @@ mod deployment;
 mod service;
 
 #[instrument()]
-pub async fn process(app: Arc<Application>) -> Result<Vec<Operation>> {
+pub fn process(app: Arc<Application>) -> Result<Vec<Operation>> {
     let app_name = app.name_any();
     let namespace = app.namespace().unwrap_or("default".to_string());
     let labels = BTreeMap::from([
@@ -32,8 +32,8 @@ pub async fn process(app: Arc<Application>) -> Result<Vec<Operation>> {
     };
 
     let mut operations = Vec::new();
-    operations.extend(deployment::process(&app, object_meta.clone(), labels.clone()).await?);
-    operations.extend(service::process(&app, object_meta.clone(), labels.clone()).await?);
+    operations.extend(deployment::process(&app, object_meta.clone(), labels.clone())?);
+    operations.extend(service::process(&app, object_meta.clone(), labels.clone())?);
     Ok(operations)
 }
 

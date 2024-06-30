@@ -14,7 +14,7 @@ use crate::resource_creator::to_dynamic_object;
 use crate::Result;
 
 #[instrument()]
-pub(crate) async fn process(app: &Arc<Application>, object_meta: ObjectMeta, labels: BTreeMap<String, String>) -> Result<Vec<Operation>> {
+pub(crate) fn process(app: &Arc<Application>, object_meta: ObjectMeta, labels: BTreeMap<String, String>) -> Result<Vec<Operation>> {
     let deployment = Deployment {
         metadata: object_meta,
         spec: Some(DeploymentSpec {

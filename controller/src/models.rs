@@ -11,9 +11,11 @@ use kube::{
     core::GroupVersionKind,
     discovery::{ApiCapabilities, ApiResource, Discovery, Scope},
 };
+use serde::{Deserialize, Serialize};
 use tracing::log::{debug, info};
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "operation", content = "object")]
 pub enum Operation {
     CreateOrUpdate(Arc<DynamicObject>),
     DeleteIfExists(Arc<DynamicObject>),

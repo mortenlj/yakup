@@ -12,7 +12,7 @@ use crate::resource_creator::to_dynamic_object;
 use crate::Result;
 
 #[instrument()]
-pub(crate) async fn process(app: &Arc<Application>, object_meta: ObjectMeta, labels: BTreeMap<String, String>) -> Result<Vec<Operation>> {
+pub(crate) fn process(app: &Arc<Application>, object_meta: ObjectMeta, labels: BTreeMap<String, String>) -> Result<Vec<Operation>> {
     let ports = generate_ports(app);
     if ports.is_none() || ports.as_ref().unwrap().is_empty() {
         return Ok(vec![Operation::DeleteIfExists(Arc::new(to_dynamic_object(Service {

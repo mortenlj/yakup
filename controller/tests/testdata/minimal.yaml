@@ -1,0 +1,12 @@
+name: Minimal integration test
+
+app_spec:
+  image: "busybox:latest"
+
+operations:
+  - operation: CreateOrUpdate
+    object:
+      kind: Deployment
+  - operation: DeleteIfExists
+    object:
+      kind: Service

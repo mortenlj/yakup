@@ -18,8 +18,8 @@ use tracing_subscriber::prelude::*;
 
 use api::Application;
 
-mod models;
-mod resource_creator;
+pub mod models;
+pub mod resource_creator;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -76,7 +76,7 @@ async fn reconcile(obj: Arc<Application>, ctx: Arc<Context>) -> Result<Action> {
     Span::current().record("trace_id", &field::display(&trace_id));
 
     info!("reconcile request: {}", obj.name_any());
-    let operations = resource_creator::process(obj).await?;
+    let operations = resource_creator::process(obj)?;
     for operation in operations.iter() {
         match operation.apply(ctx.client.clone()).await {
             Ok(object) => {
