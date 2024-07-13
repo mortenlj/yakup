@@ -1,8 +1,8 @@
-use std::fmt::Display;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Condition;
 use k8s_openapi::serde::{Deserialize, Serialize};
 use kube::CustomResource;
 use schemars::JsonSchema;
+use std::fmt::Display;
 
 #[derive(CustomResource, Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 #[kube(
@@ -13,7 +13,7 @@ use schemars::JsonSchema;
     status = "ApplicationStatus",
     shortname = "app",
     doc = "Yet Another Application Kind",
-    printcolumn = r#"{"name":"Image","type":"string","jsonPath":".spec.image"}"#,
+    printcolumn = r#"{"name":"Image","type":"string","jsonPath":".spec.image"}"#
 )]
 #[serde(rename_all = "camelCase")]
 pub struct ApplicationSpec {

@@ -23,6 +23,7 @@ opentelemetry-semantic-conventions = "0.15.0"
 serde_json = "1.0.120"
 serde_yaml = "0.9.34"
 serde = { version = "1.0.204", features = ["derive", "rc"] }
+anyhow = "1.0.86"
 
 [dev-dependencies]
 assert-json-diff = "2.0.2"

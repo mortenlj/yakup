@@ -338,6 +338,7 @@ dependencies = [
 name = "controller"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "api",
  "assert-json-diff",
  "build-deps",

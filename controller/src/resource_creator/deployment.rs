@@ -7,14 +7,18 @@ use k8s_openapi::apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta};
 use kube::ResourceExt;
 use tracing::instrument;
 
+use anyhow::Result;
 use api::Application;
 
 use crate::models::Operation;
 use crate::resource_creator::to_dynamic_object;
-use crate::Result;
 
 #[instrument()]
-pub(crate) fn process(app: &Arc<Application>, object_meta: ObjectMeta, labels: BTreeMap<String, String>) -> Result<Vec<Operation>> {
+pub(crate) fn process(
+    app: &Arc<Application>,
+    object_meta: ObjectMeta,
+    labels: BTreeMap<String, String>,
+) -> Result<Vec<Operation>> {
     let deployment = Deployment {
         metadata: object_meta,
         spec: Some(DeploymentSpec {
@@ -43,19 +47,20 @@ pub(crate) fn process(app: &Arc<Application>, object_meta: ObjectMeta, labels: B
         ..Default::default()
     };
 
-    Ok(vec![
-        Operation::CreateOrUpdate(Arc::new(to_dynamic_object(deployment)?))
-    ])
+    Ok(vec![Operation::CreateOrUpdate(Arc::new(
+        to_dynamic_object(deployment)?,
+    ))])
 }
 
 fn generate_ports(app: &Arc<Application>) -> Option<Vec<ContainerPort>> {
     app.spec.ports.as_ref().map(|ports| {
-        ports.iter().map(|port| {
-            ContainerPort {
+        ports
+            .iter()
+            .map(|port| ContainerPort {
                 name: Some(port.name()),
                 container_port: port.port as i32,
                 ..Default::default()
-            }
-        }).collect()
+            })
+            .collect()
     })
 }

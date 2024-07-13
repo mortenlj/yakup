@@ -2,14 +2,14 @@ use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 use std::sync::Arc;
 
-use crate::Error;
+use anyhow::{anyhow, bail, Result};
+
 use either::Either;
 use kube::{
-    Error as KubeError,
-    api::{Api, DynamicObject, DeleteParams, PostParams},
-    Client,
+    api::{Api, DeleteParams, DynamicObject, PostParams},
     core::GroupVersionKind,
     discovery::{ApiCapabilities, ApiResource, Discovery, Scope},
+    Client, Error as KubeError,
 };
 use serde::{Deserialize, Serialize};
 use tracing::log::{debug, info};
@@ -31,7 +31,7 @@ impl Display for Operation {
 }
 
 impl Operation {
-    pub async fn apply(self: &Self, client: Client) -> Result<Arc<DynamicObject>, Error> {
+    pub async fn apply(self: &Self, client: Client) -> Result<Arc<DynamicObject>> {
         match self {
             Operation::CreateOrUpdate(object) => {
                 self.apply_create_or_update(client, object).await?;
@@ -44,23 +44,31 @@ impl Operation {
         }
     }
 
-    pub async fn gvk(self: &Self, object: &Arc<DynamicObject>) -> Result<GroupVersionKind, Error> {
+    pub async fn gvk(self: &Self, object: &Arc<DynamicObject>) -> Result<GroupVersionKind> {
         let gvk = if let Some(tm) = &object.types {
-            GroupVersionKind::try_from(tm).map_err(|_| Error::ConfigError)?
+            GroupVersionKind::try_from(tm)
+                .map_err(|e| anyhow!(e).context("failed to convert type metadata to GVK"))?
         } else {
-            return Err(Error::ConfigError);
+            bail!("unable to get type metadata for object")
         };
         Ok(gvk)
     }
 
-    async fn apply_create_or_update(&self, client: Client, object: &Arc<DynamicObject>) -> Result<(), Error> {
-        let discovery = Discovery::new(client.clone()).run().await.map_err(|_| Error::ConfigError)?;
+    async fn apply_create_or_update(
+        &self,
+        client: Client,
+        object: &Arc<DynamicObject>,
+    ) -> Result<()> {
+        let discovery = Discovery::new(client.clone())
+            .run()
+            .await
+            .map_err(|e| anyhow!(e).context("creating discovery client"))?;
         let namespace = object.metadata.namespace.as_deref();
         let gvk = self.gvk(object).await?;
         let api = if let Some((ar, caps)) = discovery.resolve_gvk(&gvk) {
             dynamic_api(ar, caps, client.clone(), namespace, false)
         } else {
-            return Err(Error::ConfigError);
+            bail!("unable to resolve gvk through discovery")
         };
 
         let object_name = object.metadata.name.clone().unwrap();
@@ -70,15 +78,27 @@ impl Operation {
                 debug!("{} {:?} already exists", gvk.kind, object_name);
                 let mut obj = object.deref().clone();
                 obj.metadata.resource_version = existing_obj.metadata.resource_version.clone();
-                api.replace(&object_name, &PostParams::default(), &obj).await.map_err(|_| Error::ConfigError)?;
+                api.replace(&object_name, &PostParams::default(), &obj)
+                    .await
+                    .map_err(|e| {
+                        anyhow!(e).context(format!("replacing object named {}", &object_name))
+                    })?;
             }
             Err(e) => {
                 if let KubeError::Api(api_error) = e {
                     if vec![404, 410].contains(&api_error.code) {
                         debug!("{} {:?} not found, creating", gvk.kind, object_name);
-                        api.create(&PostParams::default(), &object).await.map_err(|_| Error::ConfigError)?;
+                        api.create(&PostParams::default(), &object)
+                            .await
+                            .map_err(|e| {
+                                anyhow!(e).context(format!(
+                                    "getting existing object named {}",
+                                    &object_name
+                                ))
+                            })?;
                     } else {
-                        return Err(Error::ConfigError);
+                        return Err(anyhow!(api_error)
+                            .context(format!("getting existing object named {}", &object_name)));
                     }
                 }
             }
@@ -86,34 +106,43 @@ impl Operation {
         Ok(())
     }
 
-    async fn apply_delete_if_exists(&self, client: Client, object: &Arc<DynamicObject>) -> Result<(), Error> {
-        let discovery = Discovery::new(client.clone()).run().await.map_err(|_| Error::ConfigError)?;
+    async fn apply_delete_if_exists(
+        &self,
+        client: Client,
+        object: &Arc<DynamicObject>,
+    ) -> Result<()> {
+        let discovery = Discovery::new(client.clone())
+            .run()
+            .await
+            .map_err(|e| anyhow!(e).context("creating discovery client"))?;
         let namespace = object.metadata.namespace.as_deref();
         let gvk = self.gvk(object).await?;
         let api = if let Some((ar, caps)) = discovery.resolve_gvk(&gvk) {
             dynamic_api(ar, caps, client.clone(), namespace, false)
         } else {
-            return Err(Error::ConfigError);
+            bail!("unable to resolve gvk through discovery")
         };
 
         let object_name = object.metadata.name.clone().unwrap();
-        match api.delete(object_name.as_str(), &DeleteParams::default()).await {
-            Ok(res) => {
-                match res {
-                    Either::Left(_obj) => {
-                        info!("Deleting {} {:?}", gvk.kind, object_name)
-                    }
-                    Either::Right(_status) => {
-                        info!("{} {:?} deleted successfully", gvk.kind, object_name)
-                    }
+        match api
+            .delete(object_name.as_str(), &DeleteParams::default())
+            .await
+        {
+            Ok(res) => match res {
+                Either::Left(_obj) => {
+                    info!("Deleting {} {:?}", gvk.kind, object_name)
                 }
-            }
+                Either::Right(_status) => {
+                    info!("{} {:?} deleted successfully", gvk.kind, object_name)
+                }
+            },
             Err(e) => {
                 if let KubeError::Api(api_error) = e {
                     if vec![404, 410].contains(&api_error.code) {
                         info!("{} {:?} not found", gvk.kind, object_name)
                     } else {
-                        return Err(Error::ConfigError);
+                        return Err(anyhow!(api_error)
+                            .context(format!("deleting existing object named {}", &object_name)));
                     }
                 }
             }
@@ -121,7 +150,6 @@ impl Operation {
         Ok(())
     }
 }
-
 
 fn dynamic_api(
     ar: ApiResource,

@@ -1,20 +1,22 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::{anyhow, Result};
 use futures::StreamExt;
 use k8s_openapi::api::apps::v1::Deployment;
-use kube::{Api, Client, ResourceExt};
 use kube::runtime::controller::Action;
 use kube::runtime::controller::Controller;
+use kube::{Api, Client, ResourceExt};
+use opentelemetry::trace::TraceId;
 use opentelemetry::KeyValue;
-use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::trace::Tracer;
+use opentelemetry_sdk::Resource;
 use opentelemetry_semantic_conventions::resource;
-use tracing::{error, field, info, instrument, Span};
 use tracing::level_filters::LevelFilter;
+use tracing::{error, field, info, instrument, Span};
 use tracing_opentelemetry::OpenTelemetryLayer;
-use tracing_subscriber::{EnvFilter, Registry};
 use tracing_subscriber::prelude::*;
+use tracing_subscriber::{EnvFilter, Registry};
 
 use api::Application;
 
@@ -22,12 +24,16 @@ pub mod models;
 pub mod resource_creator;
 
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
-    #[error("Config error")]
-    ConfigError
+enum ReconcilerError {
+    #[error("unable to resolve gvk for dynamic object")]
+    GvkLookup,
+    #[error("processing resource")]
+    ResourceProcessing,
+    #[error("applying operations")]
+    ApplyOperations,
 }
 
-pub type Result<T, E = Error> = std::result::Result<T, E>;
+type ReconcileResult<T, E = ReconcilerError> = std::result::Result<T, E>;
 
 struct Context {
     pub client: Client,
@@ -52,12 +58,13 @@ pub async fn run() -> Result<()> {
             info!(log_msg);
         }
         Err(e) => {
-            error!("Error initializing OpenTelemetry: {:?}", e);
-            return Err(Error::ConfigError);
+            return Err(e.context("initializing OpenTelemetry"));
         }
     }
 
-    let client = Client::try_default().await.map_err(|_| Error::ConfigError)?;
+    let client = Client::try_default()
+        .await
+        .map_err(|e| anyhow!(e).context("initializing Kubernetes client"))?;
     let apps = Api::<Application>::all(client.clone());
     let deployments = Api::<Deployment>::all(client.clone());
 
@@ -71,28 +78,43 @@ pub async fn run() -> Result<()> {
 }
 
 #[instrument(skip(ctx), fields(trace_id))]
-async fn reconcile(obj: Arc<Application>, ctx: Arc<Context>) -> Result<Action> {
+async fn reconcile(obj: Arc<Application>, ctx: Arc<Context>) -> ReconcileResult<Action> {
     let trace_id = get_trace_id();
     Span::current().record("trace_id", &field::display(&trace_id));
 
     info!("reconcile request: {}", obj.name_any());
-    let operations = resource_creator::process(obj)?;
-    for operation in operations.iter() {
-        match operation.apply(ctx.client.clone()).await {
-            Ok(object) => {
-                let gvk = operation.gvk(&object).await.map_err(|_| {Error::ConfigError})?;
-                info!("Operation {} for {} {} applied successfully", operation, gvk.kind, object.metadata.name.as_ref().unwrap());
-            }
-            Err(e) => {
-                error!("Error applying operation: {:?}", e);
-                return Ok(Action::requeue(Duration::from_secs(5)));
+    match resource_creator::process(obj) {
+        Err(e) => {
+            error!("Error processing resource: {:?}", e);
+            return Err(ReconcilerError::ResourceProcessing);
+        }
+        Ok(operations) => {
+            for operation in operations.iter() {
+                match operation.apply(ctx.client.clone()).await {
+                    Ok(object) => {
+                        let gvk = operation
+                            .gvk(&object)
+                            .await
+                            .map_err(|_| ReconcilerError::GvkLookup)?;
+                        info!(
+                            "Operation {} for {} {} applied successfully",
+                            operation,
+                            gvk.kind,
+                            object.metadata.name.as_ref().unwrap()
+                        );
+                    }
+                    Err(e) => {
+                        error!("Error applying operation: {:?}", e);
+                        return Err(ReconcilerError::ApplyOperations);
+                    }
+                }
             }
         }
-    }
+    };
     Ok(Action::requeue(Duration::from_secs(3600)))
 }
 
-fn error_policy(_object: Arc<Application>, err: &Error, _ctx: Arc<Context>) -> Action {
+fn error_policy(_object: Arc<Application>, err: &ReconcilerError, _ctx: Arc<Context>) -> Action {
     error!("Error occurred during reconciliation: {:?}", err);
     Action::requeue(Duration::from_secs(5))
 }
@@ -107,17 +129,14 @@ async fn init_tracer() -> Result<OpenTelemetryLayer<Registry, Tracer>> {
                 KeyValue::new(resource::SERVICE_NAME, "yakup"),
             ])),
         )
-        .install_batch(opentelemetry_sdk::runtime::Tokio).map_err(|_| Error::ConfigError)?;
+        .install_batch(opentelemetry_sdk::runtime::Tokio)
+        .map_err(|e| anyhow!(e).context("installing opentelemetry tracker"))?;
     return Ok(tracing_opentelemetry::layer().with_tracer(otel_tracer));
 }
 
-pub fn get_trace_id() -> opentelemetry::trace::TraceId {
+pub fn get_trace_id() -> TraceId {
     use opentelemetry::trace::TraceContextExt as _;
     use tracing_opentelemetry::OpenTelemetrySpanExt as _;
 
-    Span::current()
-        .context()
-        .span()
-        .span_context()
-        .trace_id()
+    Span::current().context().span().span_context().trace_id()
 }

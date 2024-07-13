@@ -1,12 +1,12 @@
-use std::sync::Arc;
+use std::env;
 use std::fs::File;
 use std::path::PathBuf;
-use std::env;
+use std::sync::Arc;
 
+use assert_json_diff::assert_json_include;
+use pretty_assertions::assert_eq;
 use serde::{Deserialize, Serialize};
 use test_generator::test_resources;
-use pretty_assertions::assert_eq;
-use assert_json_diff::assert_json_include;
 
 use api::{Application, ApplicationSpec};
 use controller::models::Operation;
@@ -32,7 +32,8 @@ fn test_process(resource: PathBuf) {
     assert_eq!(operations.len(), case.operations.len());
     for (operation, expected_operation) in operations.iter().zip(case.operations.iter()) {
         let actual = serde_json::to_value(operation).expect("Could not serialize operation.");
-        let expected = serde_json::to_value(expected_operation).expect("Could not serialize expected operation.");
+        let expected = serde_json::to_value(expected_operation)
+            .expect("Could not serialize expected operation.");
         assert_json_include!(actual: actual, expected: expected);
     }
 }
