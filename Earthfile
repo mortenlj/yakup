@@ -43,6 +43,14 @@ chef-cook:
     RUN cargo chef cook --recipe-path recipe.json --release --target ${target}
     SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:chef-cook-${target}
 
+test:
+    FROM +chef-cook --target=${NATIVETARGET}
+
+    COPY --dir api controller .config Cargo.lock Cargo.toml .
+    RUN cargo nextest run --profile ci --release --target ${NATIVETARGET}
+
+    SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:test
+
 build:
     ARG --required target
     FROM +chef-cook --target=${target}
@@ -52,7 +60,6 @@ build:
     ARG EARTHLY_GIT_SHORT_HASH
     ARG VERSION=$EARTHLY_GIT_SHORT_HASH
     RUN cargo build --bin controller --release --target ${target}
-    RUN cargo nextest run --profile ci --release --target ${target}
 
     SAVE ARTIFACT target/${target}/release/controller yakup
     SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:build-${target}
@@ -109,6 +116,7 @@ manifests:
 
 deploy:
     BUILD --platform=linux/amd64 +prepare --target=${NATIVETARGET}
+    BUILD +test
     BUILD --platform=linux/arm64 +docker --target=aarch64-unknown-linux-musl
     BUILD --platform=linux/amd64 +docker --target=x86_64-unknown-linux-musl
     BUILD +manifests
