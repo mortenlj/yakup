@@ -29,6 +29,13 @@ operations:
             containers:
               - image: 'busybox:latest'
                 name: test-app
+                envFrom:
+                  - configMapRef:
+                      name: test-app
+                      optional: true
+                  - secretRef:
+                      name: test-app
+                      optional: true
   - operation: DeleteIfExists
     object:
       apiVersion: v1

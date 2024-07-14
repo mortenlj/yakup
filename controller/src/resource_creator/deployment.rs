@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use k8s_openapi::api::apps::v1::{Deployment, DeploymentSpec};
-use k8s_openapi::api::core::v1::{Container, ContainerPort, PodSpec, PodTemplateSpec};
+use k8s_openapi::api::core::v1::{ConfigMapEnvSource, Container, ContainerPort, EnvFromSource, PodSpec, PodTemplateSpec, SecretEnvSource};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta};
 use kube::ResourceExt;
 use tracing::instrument;
@@ -37,6 +37,7 @@ pub(crate) fn process(
                         name: app.name_any().clone(),
                         image: Some(app.spec.image.clone()),
                         ports: generate_ports(&app),
+                        env_from: generate_env_from(&app),
                         ..Default::default()
                     }],
                     ..Default::default()
@@ -50,6 +51,26 @@ pub(crate) fn process(
     Ok(vec![Operation::CreateOrUpdate(Arc::new(
         to_dynamic_object(deployment)?,
     ))])
+}
+
+fn generate_env_from(app: &Arc<Application>) -> Option<Vec<EnvFromSource>> {
+    let app_name = app.name_any();
+    Some(vec![
+        EnvFromSource {
+            config_map_ref: Some(ConfigMapEnvSource {
+                name: Some(app_name.clone()),
+                optional: Some(true),
+            }),
+            ..Default::default()
+        },
+        EnvFromSource {
+            secret_ref: Some(SecretEnvSource {
+                name: Some(app_name.clone()),
+                optional: Some(true),
+            }),
+            ..Default::default()
+        }
+    ])
 }
 
 fn generate_ports(app: &Arc<Application>) -> Option<Vec<ContainerPort>> {
