@@ -36,6 +36,24 @@ operations:
                   - secretRef:
                       name: test-app
                       optional: true
+                volumeMounts:
+                  - mountPath: /var/run/config/yakup.ibidem.no/test-app
+                    name: test-app-configmap
+                    readOnly: true
+                  - mountPath: /var/run/secrets/yakup.ibidem.no/test-app
+                    name: test-app-secret
+                    readOnly: true
+            volumes:
+              - configMap:
+                  name: test-app
+                  optional: true
+                  defaultMode: 0o644
+                name: test-app-configmap
+              - secret:
+                  secretName: test-app
+                  optional: true
+                  defaultMode: 0o644
+                name: test-app-secret
   - operation: DeleteIfExists
     object:
       apiVersion: v1

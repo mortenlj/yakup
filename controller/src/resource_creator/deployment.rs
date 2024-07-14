@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use k8s_openapi::api::apps::v1::{Deployment, DeploymentSpec};
-use k8s_openapi::api::core::v1::{ConfigMapEnvSource, Container, ContainerPort, EnvFromSource, PodSpec, PodTemplateSpec, SecretEnvSource};
+use k8s_openapi::api::core::v1::{ConfigMapEnvSource, ConfigMapVolumeSource, Container, ContainerPort, EnvFromSource, PodSpec, PodTemplateSpec, SecretEnvSource, SecretVolumeSource, Volume, VolumeMount};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta};
 use kube::ResourceExt;
 use tracing::instrument;
@@ -38,8 +38,10 @@ pub(crate) fn process(
                         image: Some(app.spec.image.clone()),
                         ports: generate_ports(&app),
                         env_from: generate_env_from(&app),
+                        volume_mounts: genereate_volume_mounts(&app),
                         ..Default::default()
                     }],
+                    volumes: generate_volumes(&app),
                     ..Default::default()
                 }),
             },
@@ -51,6 +53,50 @@ pub(crate) fn process(
     Ok(vec![Operation::CreateOrUpdate(Arc::new(
         to_dynamic_object(deployment)?,
     ))])
+}
+
+fn generate_volumes(app: &Arc<Application>) -> Option<Vec<Volume>> {
+    let app_name = app.name_any();
+    Some(vec![
+        Volume {
+            name: format!("{}-configmap", app_name.clone()),
+            config_map: Some(ConfigMapVolumeSource {
+                name: Some(app_name.clone()),
+                optional: Some(true),
+                default_mode: Some(0o644),
+                ..Default::default()
+            }),
+            ..Default::default()
+        },
+        Volume {
+            name: format!("{}-secret", app_name.clone()),
+            secret: Some(SecretVolumeSource {
+                secret_name: Some(app_name.clone()),
+                optional: Some(true),
+                default_mode: Some(0o644),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    ])
+}
+
+fn genereate_volume_mounts(app: &Arc<Application>) -> Option<Vec<VolumeMount>> {
+    let app_name = app.name_any();
+    Some(vec![
+        VolumeMount {
+            name: format!("{}-configmap", app_name.clone()),
+            mount_path: format!("/var/run/config/yakup.ibidem.no/{}", app_name.clone()),
+            read_only: Some(true),
+            ..Default::default()
+        },
+        VolumeMount {
+            name: format!("{}-secret", app_name.clone()),
+            mount_path: format!("/var/run/secrets/yakup.ibidem.no/{}", app_name.clone()),
+            read_only: Some(true),
+            ..Default::default()
+        }
+    ])
 }
 
 fn generate_env_from(app: &Arc<Application>) -> Option<Vec<EnvFromSource>> {
