@@ -2,6 +2,13 @@ name: All fields tested
 
 app_spec:
   image: "busybox:latest"
+  ports:
+    - kind: http
+      port: 8080
+    - kind: metrics
+      port: 9090
+    - kind: tcp
+      port: 1234
 
 operations:
   - operation: CreateOrUpdate
@@ -29,6 +36,13 @@ operations:
             containers:
               - image: 'busybox:latest'
                 name: test-app
+                ports:
+                  - name: http
+                    containerPort: 8080
+                  - name: metrics
+                    containerPort: 9090
+                  - name: tcp
+                    containerPort: 1234
                 envFrom:
                   - configMapRef:
                       name: test-app
@@ -54,7 +68,7 @@ operations:
                   optional: true
                   defaultMode: 0o644
                 name: test-app-secret
-  - operation: DeleteIfExists
+  - operation: CreateOrUpdate
     object:
       apiVersion: v1
       kind: Service
@@ -64,3 +78,17 @@ operations:
           app.kubernetes.io/name: test-app
         name: test-app
         namespace: default
+      spec:
+        ports:
+          - name: http
+            port: 80
+            targetPort: http
+          - name: metrics
+            port: 9090
+            targetPort: metrics
+          - name: tcp
+            port: 1234
+            targetPort: tcp
+        selector:
+          app.kubernetes.io/managed-by: yakup
+          app.kubernetes.io/name: test-app

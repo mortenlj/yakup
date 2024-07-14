@@ -21,6 +21,9 @@ pub struct ApplicationSpec {
 
     #[serde(default)]
     pub ports: Vec<Port>,
+
+    #[serde(default)]
+    pub probes: Option<Probes>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
@@ -55,4 +58,11 @@ impl Display for PortKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+pub struct Probes {
+    pub readiness: Option<k8s_openapi::api::core::v1::Probe>,
+    pub liveness: Option<k8s_openapi::api::core::v1::Probe>,
+    pub startup: Option<k8s_openapi::api::core::v1::Probe>,
 }
