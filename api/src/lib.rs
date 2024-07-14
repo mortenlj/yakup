@@ -18,7 +18,9 @@ use std::fmt::Display;
 #[serde(rename_all = "camelCase")]
 pub struct ApplicationSpec {
     pub image: String,
-    pub ports: Option<Vec<Port>>,
+
+    #[serde(default)]
+    pub ports: Vec<Port>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]

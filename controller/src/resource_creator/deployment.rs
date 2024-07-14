@@ -53,14 +53,19 @@ pub(crate) fn process(
 }
 
 fn generate_ports(app: &Arc<Application>) -> Option<Vec<ContainerPort>> {
-    app.spec.ports.as_ref().map(|ports| {
-        ports
-            .iter()
-            .map(|port| ContainerPort {
-                name: Some(port.name()),
-                container_port: port.port as i32,
-                ..Default::default()
-            })
-            .collect()
-    })
+    let container_ports = app
+        .spec
+        .ports
+        .iter()
+        .map(|port| ContainerPort {
+            name: Some(port.name()),
+            container_port: port.port as i32,
+            ..Default::default()
+        })
+        .collect::<Vec<_>>();
+    if container_ports.is_empty() {
+        None
+    } else {
+        Some(container_ports)
+    }
 }
