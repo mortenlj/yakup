@@ -62,7 +62,43 @@ impl Display for PortKind {
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 pub struct Probes {
-    pub readiness: Option<k8s_openapi::api::core::v1::Probe>,
-    pub liveness: Option<k8s_openapi::api::core::v1::Probe>,
-    pub startup: Option<k8s_openapi::api::core::v1::Probe>,
+    pub readiness: Option<Probe>,
+    pub liveness: Option<Probe>,
+    pub startup: Option<Probe>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+pub struct Probe {
+    pub initial_delay_seconds: u16,
+    pub port_name: String,
+    pub http_action: Option<HttpAction>,
+    pub grpc_action: Option<GrpcAction>,
+    pub tcp_action: Option<TcpAction>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct HttpAction {
+    path: Option<String>
+}
+
+impl Default for HttpAction {
+    fn default() -> Self {
+        HttpAction { path: Some("/".to_string()) }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct GrpcAction {
+    service: Option<String>
+}
+
+impl Default for GrpcAction {
+    fn default() -> Self {
+        GrpcAction { service: None }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+pub struct TcpAction {
+}
+
