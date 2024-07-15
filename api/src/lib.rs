@@ -20,31 +20,34 @@ pub struct ApplicationSpec {
     pub image: String,
 
     #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub ports: Vec<Port>,
 
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub probes: Option<Probes>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct ApplicationStatus {
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub conditions: Vec<Condition>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Port {
     pub kind: PortKind,
     pub port: u16,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "lowercase")]
 pub enum PortKind {
     #[default]
-    #[serde(alias = "http")]
     HTTP,
-    #[serde(alias = "metrics")]
     Metrics,
-    #[serde(alias = "tcp")]
     TCP,
 }
 
@@ -61,44 +64,75 @@ impl Display for PortKind {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Probes {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub readiness: Option<Probe>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub liveness: Option<Probe>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub startup: Option<Probe>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Probe {
+    #[serde(default = "default_initial_delay_seconds")]
     pub initial_delay_seconds: u16,
+
     pub port_name: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub http_action: Option<HttpAction>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub grpc_action: Option<GrpcAction>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tcp_action: Option<TcpAction>,
 }
 
+fn default_initial_delay_seconds() -> u16 {
+    15
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct HttpAction {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default = "default_http_path")]
     path: Option<String>
+}
+
+fn default_http_path() -> Option<String> {
+    Some("/".to_string())
 }
 
 impl Default for HttpAction {
     fn default() -> Self {
-        HttpAction { path: Some("/".to_string()) }
+        HttpAction { path: default_http_path() }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct GrpcAction {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default = "default_grpc_service")]
     service: Option<String>
+}
+
+fn default_grpc_service() -> Option<String> {
+    None
 }
 
 impl Default for GrpcAction {
     fn default() -> Self {
-        GrpcAction { service: None }
+        GrpcAction { service: default_grpc_service() }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct TcpAction {
 }
-
