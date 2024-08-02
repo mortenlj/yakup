@@ -76,20 +76,24 @@ pub struct Probes {
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct Probe {
+pub struct ProbeConfig {
     #[serde(default = "default_initial_delay_seconds")]
     pub initial_delay_seconds: u16,
 
     pub port_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Probe {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub http: Option<HttpAction>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub http_action: Option<HttpAction>,
+    pub grpc: Option<GrpcAction>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub grpc_action: Option<GrpcAction>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tcp_action: Option<TcpAction>,
+    pub tcp: Option<TcpAction>,
 }
 
 fn default_initial_delay_seconds() -> u16 {
@@ -101,7 +105,10 @@ fn default_initial_delay_seconds() -> u16 {
 pub struct HttpAction {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default = "default_http_path")]
-    path: Option<String>
+    pub path: Option<String>,
+
+    #[serde(flatten)]
+    pub config: ProbeConfig,
 }
 
 fn default_http_path() -> Option<String> {
@@ -110,7 +117,10 @@ fn default_http_path() -> Option<String> {
 
 impl Default for HttpAction {
     fn default() -> Self {
-        HttpAction { path: default_http_path() }
+        HttpAction {
+            path: default_http_path(),
+            config: Default::default(),
+        }
     }
 }
 
@@ -119,7 +129,10 @@ impl Default for HttpAction {
 pub struct GrpcAction {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default = "default_grpc_service")]
-    service: Option<String>
+    pub service: Option<String>,
+
+    #[serde(flatten)]
+    pub config: ProbeConfig,
 }
 
 fn default_grpc_service() -> Option<String> {
@@ -128,11 +141,16 @@ fn default_grpc_service() -> Option<String> {
 
 impl Default for GrpcAction {
     fn default() -> Self {
-        GrpcAction { service: default_grpc_service() }
+        GrpcAction {
+            service: default_grpc_service(),
+            config: Default::default(),
+        }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TcpAction {
+    #[serde(flatten)]
+    pub config: ProbeConfig,
 }
