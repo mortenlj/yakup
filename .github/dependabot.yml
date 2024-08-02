@@ -6,6 +6,10 @@ updates:
       interval: "daily"
     open-pull-requests-limit: 5
     groups:
+      opentelemetry:
+        patterns:
+          - opentelemetry*
+          - tracing-opentelemetry
       k8s:
         patterns:
           - kube
