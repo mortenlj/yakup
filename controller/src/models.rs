@@ -31,7 +31,7 @@ impl Display for Operation {
 }
 
 impl Operation {
-    pub async fn apply(self: &Self, client: Client) -> Result<Arc<DynamicObject>> {
+    pub async fn apply(&self, client: Client) -> Result<Arc<DynamicObject>> {
         match self {
             Operation::CreateOrUpdate(object) => {
                 self.apply_create_or_update(client, object).await?;
@@ -44,7 +44,7 @@ impl Operation {
         }
     }
 
-    pub async fn gvk(self: &Self, object: &Arc<DynamicObject>) -> Result<GroupVersionKind> {
+    pub async fn gvk(&self, object: &Arc<DynamicObject>) -> Result<GroupVersionKind> {
         let gvk = if let Some(tm) = &object.types {
             GroupVersionKind::try_from(tm)
                 .map_err(|e| anyhow!(e).context("failed to convert type metadata to GVK"))?
@@ -86,9 +86,9 @@ impl Operation {
             }
             Err(e) => {
                 if let KubeError::Api(api_error) = e {
-                    if vec![404, 410].contains(&api_error.code) {
+                    if [404, 410].contains(&api_error.code) {
                         debug!("{} {:?} not found, creating", gvk.kind, object_name);
-                        api.create(&PostParams::default(), &object)
+                        api.create(&PostParams::default(), object)
                             .await
                             .map_err(|e| {
                                 anyhow!(e).context(format!(
@@ -138,7 +138,7 @@ impl Operation {
             },
             Err(e) => {
                 if let KubeError::Api(api_error) = e {
-                    if vec![404, 410].contains(&api_error.code) {
+                    if [404, 410].contains(&api_error.code) {
                         info!("{} {:?} not found", gvk.kind, object_name)
                     } else {
                         return Err(anyhow!(api_error)

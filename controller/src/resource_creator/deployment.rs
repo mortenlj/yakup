@@ -37,15 +37,15 @@ pub(crate) fn process(
                     containers: vec![Container {
                         name: app.name_any().clone(),
                         image: Some(app.spec.image.clone()),
-                        ports: generate_ports(&app),
-                        env_from: generate_env_from(&app),
-                        volume_mounts: genereate_volume_mounts(&app),
-                        liveness_probe: generate_probe(&app, |probes: &Probes| probes.liveness.clone()),
-                        readiness_probe: generate_probe(&app, |probes: &Probes| probes.readiness.clone()),
-                        startup_probe: generate_probe(&app, |probes: &Probes| probes.startup.clone()),
+                        ports: generate_ports(app),
+                        env_from: generate_env_from(app),
+                        volume_mounts: genereate_volume_mounts(app),
+                        liveness_probe: generate_probe(app, |probes: &Probes| probes.liveness.clone()),
+                        readiness_probe: generate_probe(app, |probes: &Probes| probes.readiness.clone()),
+                        startup_probe: generate_probe(app, |probes: &Probes| probes.startup.clone()),
                         ..Default::default()
                     }],
-                    volumes: generate_volumes(&app),
+                    volumes: generate_volumes(app),
                     ..Default::default()
                 }),
             },

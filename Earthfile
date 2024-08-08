@@ -18,6 +18,7 @@ prepare:
     RUN apt-get --yes update && apt-get --yes install cmake musl-tools gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu
     RUN rustup target add x86_64-unknown-linux-musl
     RUN rustup target add aarch64-unknown-linux-musl
+    RUN rustup component add clippy
 
     ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=/usr/bin/aarch64-linux-gnu-gcc
     ENV CC_aarch64_unknown_linux_musl=/usr/bin/aarch64-linux-gnu-gcc
@@ -40,6 +41,8 @@ chef-cook:
     ARG --required target
     FROM +prepare --target=${target}
     COPY +chef-planner/recipe.json recipe.json
+    RUN cargo chef cook --recipe-path recipe.json --release --target ${target} --tests
+    RUN cargo chef cook --recipe-path recipe.json --release --target ${target} --clippy
     RUN cargo chef cook --recipe-path recipe.json --release --target ${target}
     SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:chef-cook-${target}
 
@@ -48,6 +51,7 @@ test:
 
     COPY --dir api controller .config Cargo.lock Cargo.toml .
     RUN cargo nextest run --profile ci --release --target ${NATIVETARGET}
+    RUN cargo clippy --no-deps --release --target ${NATIVETARGET} -- --deny warnings
 
     SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:test
 

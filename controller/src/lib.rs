@@ -80,7 +80,7 @@ pub async fn run() -> Result<()> {
 #[instrument(skip(ctx), fields(trace_id))]
 async fn reconcile(obj: Arc<Application>, ctx: Arc<Context>) -> ReconcileResult<Action> {
     let trace_id = get_trace_id();
-    Span::current().record("trace_id", &field::display(&trace_id));
+    Span::current().record("trace_id", field::display(&trace_id));
 
     info!("reconcile request: {}", obj.name_any());
     match resource_creator::process(obj) {
@@ -131,7 +131,7 @@ async fn init_tracer() -> Result<OpenTelemetryLayer<Registry, Tracer>> {
         )
         .install_batch(opentelemetry_sdk::runtime::Tokio)
         .map_err(|e| anyhow!(e).context("installing opentelemetry tracker"))?;
-    return Ok(tracing_opentelemetry::layer().with_tracer(otel_tracer));
+    Ok(tracing_opentelemetry::layer().with_tracer(otel_tracer))
 }
 
 pub fn get_trace_id() -> TraceId {

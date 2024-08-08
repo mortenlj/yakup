@@ -52,7 +52,7 @@ pub enum PortKind {
 }
 
 impl Port {
-    pub fn name(self: &Self) -> String {
+    pub fn name(&self) -> String {
         self.kind.to_string().to_lowercase()
     }
 }

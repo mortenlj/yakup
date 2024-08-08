@@ -50,7 +50,7 @@ where
     K::DynamicType: Default,
 {
     let mut dynamic_object = DynamicObject::new(
-        &resource.name_any().as_str(),
+        resource.name_any().as_str(),
         &ApiResource::erase::<K>(&Default::default()),
     );
 
