@@ -14,13 +14,19 @@ use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 use crate::models::Operation;
 use crate::resource_creator::to_dynamic_object;
 
+struct FromConfig {
+    env_from: Option<Vec<EnvFromSource>>,
+    volume_mounts: Option<Vec<VolumeMount>>,
+    volumes: Option<Vec<Volume>>,
+}
+
 #[instrument()]
 pub(crate) fn process(
     app: &Arc<Application>,
     object_meta: ObjectMeta,
     labels: BTreeMap<String, String>,
 ) -> Result<Vec<Operation>> {
-    let (env_from, volume_mounts, volumes) = generate_from_config(app);
+    let from_config = generate_from_config(app);
     let deployment = Deployment {
         metadata: object_meta,
         spec: Some(DeploymentSpec {
@@ -39,14 +45,14 @@ pub(crate) fn process(
                         name: app.name_any().clone(),
                         image: Some(app.spec.image.clone()),
                         ports: generate_ports(app),
-                        env_from,
-                        volume_mounts,
+                        env_from: from_config.env_from,
+                        volume_mounts: from_config.volume_mounts,
                         liveness_probe: generate_probe(app, |probes: &Probes| probes.liveness.clone()),
                         readiness_probe: generate_probe(app, |probes: &Probes| probes.readiness.clone()),
                         startup_probe: generate_probe(app, |probes: &Probes| probes.startup.clone()),
                         ..Default::default()
                     }],
-                    volumes,
+                    volumes: from_config.volumes,
                     ..Default::default()
                 }),
             },
@@ -60,7 +66,7 @@ pub(crate) fn process(
     ))])
 }
 
-fn generate_from_config(app: &Arc<Application>) -> (Option<Vec<EnvFromSource>>, Option<Vec<VolumeMount>>, Option<Vec<Volume>>) {
+fn generate_from_config(app: &Arc<Application>) -> FromConfig {
     let mut env_from = vec![];
     let mut volume_mounts = vec![];
     let mut volumes = vec![];
@@ -71,7 +77,11 @@ fn generate_from_config(app: &Arc<Application>) -> (Option<Vec<EnvFromSource>>, 
         volumes.extend(generate_volumes(name.clone()));
     }
 
-    (Some(env_from), Some(volume_mounts), Some(volumes))
+    FromConfig {
+        env_from: Some(env_from),
+        volume_mounts: Some(volume_mounts),
+        volumes: Some(volumes)
+    }
 }
 
 fn generate_probe(
