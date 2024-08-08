@@ -20,6 +20,7 @@ pub(crate) fn process(
     object_meta: ObjectMeta,
     labels: BTreeMap<String, String>,
 ) -> Result<Vec<Operation>> {
+    let (env_from, volume_mounts, volumes) = generate_from_config(app);
     let deployment = Deployment {
         metadata: object_meta,
         spec: Some(DeploymentSpec {
@@ -38,14 +39,14 @@ pub(crate) fn process(
                         name: app.name_any().clone(),
                         image: Some(app.spec.image.clone()),
                         ports: generate_ports(app),
-                        env_from: generate_env_from(app),
-                        volume_mounts: genereate_volume_mounts(app),
+                        env_from,
+                        volume_mounts,
                         liveness_probe: generate_probe(app, |probes: &Probes| probes.liveness.clone()),
                         readiness_probe: generate_probe(app, |probes: &Probes| probes.readiness.clone()),
                         startup_probe: generate_probe(app, |probes: &Probes| probes.startup.clone()),
                         ..Default::default()
                     }],
-                    volumes: generate_volumes(app),
+                    volumes,
                     ..Default::default()
                 }),
             },
@@ -57,6 +58,20 @@ pub(crate) fn process(
     Ok(vec![Operation::CreateOrUpdate(Arc::new(
         to_dynamic_object(deployment)?,
     ))])
+}
+
+fn generate_from_config(app: &Arc<Application>) -> (Option<Vec<EnvFromSource>>, Option<Vec<VolumeMount>>, Option<Vec<Volume>>) {
+    let mut env_from = vec![];
+    let mut volume_mounts = vec![];
+    let mut volumes = vec![];
+
+    for name in [format!("{}-db", app.name_any()), app.name_any()].iter() {
+        env_from.extend(generate_env_from(name.clone()));
+        volume_mounts.extend(genereate_volume_mounts(name.clone()));
+        volumes.extend(generate_volumes(name.clone()));
+    }
+
+    (Some(env_from), Some(volume_mounts), Some(volumes))
 }
 
 fn generate_probe(
@@ -114,9 +129,8 @@ fn generate_probe(
     }
 }
 
-fn generate_volumes(app: &Arc<Application>) -> Option<Vec<Volume>> {
-    let app_name = app.name_any();
-    Some(vec![
+fn generate_volumes(app_name: String) -> Vec<Volume> {
+    vec![
         Volume {
             name: format!("{}-configmap", app_name.clone()),
             config_map: Some(ConfigMapVolumeSource {
@@ -137,12 +151,11 @@ fn generate_volumes(app: &Arc<Application>) -> Option<Vec<Volume>> {
             }),
             ..Default::default()
         },
-    ])
+    ]
 }
 
-fn genereate_volume_mounts(app: &Arc<Application>) -> Option<Vec<VolumeMount>> {
-    let app_name = app.name_any();
-    Some(vec![
+fn genereate_volume_mounts(app_name: String) -> Vec<VolumeMount> {
+    vec![
         VolumeMount {
             name: format!("{}-configmap", app_name.clone()),
             mount_path: format!("/var/run/config/yakup.ibidem.no/{}", app_name.clone()),
@@ -155,12 +168,11 @@ fn genereate_volume_mounts(app: &Arc<Application>) -> Option<Vec<VolumeMount>> {
             read_only: Some(true),
             ..Default::default()
         },
-    ])
+    ]
 }
 
-fn generate_env_from(app: &Arc<Application>) -> Option<Vec<EnvFromSource>> {
-    let app_name = app.name_any();
-    Some(vec![
+fn generate_env_from(app_name: String) -> Vec<EnvFromSource> {
+    vec![
         EnvFromSource {
             config_map_ref: Some(ConfigMapEnvSource {
                 name: Some(app_name.clone()),
@@ -175,7 +187,7 @@ fn generate_env_from(app: &Arc<Application>) -> Option<Vec<EnvFromSource>> {
             }),
             ..Default::default()
         },
-    ])
+    ]
 }
 
 fn generate_ports(app: &Arc<Application>) -> Option<Vec<ContainerPort>> {

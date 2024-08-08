@@ -84,12 +84,24 @@ operations:
                     containerPort: 1234
                 envFrom:
                   - configMapRef:
+                      name: test-app-db
+                      optional: true
+                  - secretRef:
+                      name: test-app-db
+                      optional: true
+                  - configMapRef:
                       name: test-app
                       optional: true
                   - secretRef:
                       name: test-app
                       optional: true
                 volumeMounts:
+                  - mountPath: /var/run/config/yakup.ibidem.no/test-app-db
+                    name: test-app-db-configmap
+                    readOnly: true
+                  - mountPath: /var/run/secrets/yakup.ibidem.no/test-app-db
+                    name: test-app-db-secret
+                    readOnly: true
                   - mountPath: /var/run/config/yakup.ibidem.no/test-app
                     name: test-app-configmap
                     readOnly: true
@@ -97,6 +109,16 @@ operations:
                     name: test-app-secret
                     readOnly: true
             volumes:
+              - configMap:
+                  name: test-app-db
+                  optional: true
+                  defaultMode: 0o644
+                name: test-app-db-configmap
+              - secret:
+                  secretName: test-app-db
+                  optional: true
+                  defaultMode: 0o644
+                name: test-app-db-secret
               - configMap:
                   name: test-app
                   optional: true
