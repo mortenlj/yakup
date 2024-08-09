@@ -7,6 +7,7 @@ use k8s_openapi::api::apps::v1::Deployment;
 use kube::runtime::controller::Action;
 use kube::runtime::controller::Controller;
 use kube::{Api, Client, ResourceExt};
+use kube::runtime::reflector::ObjectRef;
 use opentelemetry::trace::TraceId;
 use opentelemetry::KeyValue;
 use opentelemetry_sdk::trace::Tracer;
@@ -77,12 +78,12 @@ pub async fn run() -> Result<()> {
     Ok(())
 }
 
-#[instrument(skip(ctx), fields(trace_id))]
+#[instrument(skip(ctx, obj), fields(trace_id))]
 async fn reconcile(obj: Arc<Application>, ctx: Arc<Context>) -> ReconcileResult<Action> {
     let trace_id = get_trace_id();
     Span::current().record("trace_id", field::display(&trace_id));
 
-    info!("reconcile request: {}", obj.name_any());
+    info!("reconcile request received");
     match resource_creator::process(obj) {
         Err(e) => {
             error!("Error processing resource: {:?}", e);

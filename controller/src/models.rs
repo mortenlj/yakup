@@ -12,6 +12,7 @@ use kube::{
     Client, Error as KubeError,
 };
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 use tracing::log::{debug, info};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -31,6 +32,7 @@ impl Display for Operation {
 }
 
 impl Operation {
+    #[instrument(skip_all)]
     pub async fn apply(&self, client: Client) -> Result<Arc<DynamicObject>> {
         match self {
             Operation::CreateOrUpdate(object) => {
@@ -54,6 +56,7 @@ impl Operation {
         Ok(gvk)
     }
 
+    #[instrument(skip_all)]
     async fn apply_create_or_update(
         &self,
         client: Client,
@@ -106,6 +109,7 @@ impl Operation {
         Ok(())
     }
 
+    #[instrument(skip_all)]
     async fn apply_delete_if_exists(
         &self,
         client: Client,
