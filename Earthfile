@@ -27,7 +27,7 @@ prepare:
     ENV CC_x86_64_unknown_linux_musl=/usr/bin/x86_64-linux-gnu-gcc
 
     RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-    RUN cargo binstall --no-confirm --no-cleanup cargo-chef cargo-nextest
+    RUN cargo binstall --no-confirm --no-cleanup cargo-chef cargo-nextest cargo-cache
 
     SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:prepare
 
@@ -41,9 +41,12 @@ chef-cook:
     ARG --required target
     FROM +prepare --target=${target}
     COPY +chef-planner/recipe.json recipe.json
+    ENV CARGO_HOME=/var/cache/cargo
+    CACHE --sharing shared --id cargo ${CARGO_HOME}
     RUN cargo chef cook --recipe-path recipe.json --release --target ${target} --tests
     RUN cargo chef cook --recipe-path recipe.json --release --target ${target} --clippy
     RUN cargo chef cook --recipe-path recipe.json --release --target ${target}
+    RUN cargo cache --autoclean
     SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:chef-cook-${target}
 
 test:
