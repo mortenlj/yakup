@@ -121,6 +121,12 @@ manifests:
 deploy:
     BUILD --platform=linux/amd64 +prepare --target=${NATIVETARGET}
     BUILD +test
+
+    # BUILD +build for all targets to ensure caching
+    FOR target IN x86_64-unknown-linux-musl aarch64-unknown-linux-musl
+        BUILD +build --target=${target}
+    END
+
     BUILD --platform=linux/arm64 +docker --target=aarch64-unknown-linux-musl
     BUILD --platform=linux/amd64 +docker --target=x86_64-unknown-linux-musl
     BUILD +manifests
