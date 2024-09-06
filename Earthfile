@@ -46,7 +46,6 @@ chef-cook:
     RUN cargo chef cook --recipe-path recipe.json --release --target ${target} --tests
     RUN cargo chef cook --recipe-path recipe.json --release --target ${target} --clippy
     RUN cargo chef cook --recipe-path recipe.json --release --target ${target}
-    RUN cargo cache --autoclean
     SAVE IMAGE --push ghcr.io/mortenlj/yakup/cache:chef-cook-${target}
 
 test:
