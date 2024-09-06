@@ -21,6 +21,9 @@ Temporary Items
 .Trashes
 .VolumeIcon.icns
 
+# Earthly
+.tmp-earthly-out
+
 # Rust
 target
 
