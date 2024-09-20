@@ -144,7 +144,7 @@ fn generate_volumes(app_name: String) -> Vec<Volume> {
         Volume {
             name: format!("{}-configmap", app_name.clone()),
             config_map: Some(ConfigMapVolumeSource {
-                name: Some(app_name.clone()),
+                name: app_name.clone(),
                 optional: Some(true),
                 default_mode: Some(0o644),
                 ..Default::default()
@@ -185,14 +185,14 @@ fn generate_env_from(app_name: String) -> Vec<EnvFromSource> {
     vec![
         EnvFromSource {
             config_map_ref: Some(ConfigMapEnvSource {
-                name: Some(app_name.clone()),
+                name: app_name.clone(),
                 optional: Some(true),
             }),
             ..Default::default()
         },
         EnvFromSource {
             secret_ref: Some(SecretEnvSource {
-                name: Some(app_name.clone()),
+                name: app_name.clone(),
                 optional: Some(true),
             }),
             ..Default::default()
