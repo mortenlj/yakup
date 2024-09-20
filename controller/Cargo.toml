@@ -27,7 +27,7 @@ anyhow = "1.0.86"
 
 [dev-dependencies]
 assert-json-diff = "2.0.2"
-pretty_assertions = "1.4.0"
+pretty_assertions = "1.4.1"
 rstest = "0.22.0"
 test-generator = "0.3.1"
 
