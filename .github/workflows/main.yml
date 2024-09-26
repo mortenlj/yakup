@@ -16,7 +16,7 @@ jobs:
     name: Set variables
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # ratchet:actions/checkout@v3
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # ratchet:actions/checkout@v3
       - name: "Set image version"
         id: constants
         run: |
@@ -36,7 +36,7 @@ jobs:
     env:
       VERSION: "${{ needs.setup.outputs.VERSION }}"
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # ratchet:actions/checkout@v3
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # ratchet:actions/checkout@v3
         with:
           submodules: 'true'
       - name: Login to GitHub Packages Docker Registry
