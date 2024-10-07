@@ -79,7 +79,7 @@ jobs:
         with:
           version: "latest"
           verb: call
-          args: publish --source=. "--image=${REGISTRY}" "--version=${VERSION}-dagger"
+          args: publish --source=. "--image=${REGISTRY}/yakup" "--version=${VERSION}-dagger"
           cloud-token: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
       - name: Assemble manifests
         if: matrix.builder == 'dagger'
@@ -87,7 +87,7 @@ jobs:
         with:
           version: "latest"
           verb: call
-          args: assemble-manifests --source=. "--image=${REGISTRY}" "--version=${VERSION}-dagger" --output=deploy.yaml
+          args: assemble-manifests --source=. "--image=${REGISTRY}/yakup" "--version=${VERSION}-dagger" --output=deploy.yaml
           cloud-token: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
       - name: Save manifests for later deploy
         if: matrix.builder == 'dagger'
