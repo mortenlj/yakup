@@ -4,6 +4,7 @@ import asyncio
 
 import dagger
 from dagger import dag, function, object_type
+from jinja2 import Template
 
 from .rust import Rust
 

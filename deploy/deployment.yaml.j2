@@ -22,7 +22,7 @@ spec:
         app: yakup
     spec:
       containers:
-      - image: "{{ environ('image') }}:{{ environ('VERSION') }}"
+      - {% if image is defined and image|length %}image: "{{ image }}:{{ version }}"{% else %}image: "{{ environ('image') }}:{{ environ('VERSION') }}"{% endif %}
         imagePullPolicy: IfNotPresent
         name: yakup
         env:
