@@ -1,0 +1,12 @@
+{
+  "name": "yakup",
+  "sdk": "python",
+  "dependencies": [
+    {
+      "name": "github",
+      "source": "github.com/jedevc/daggerverse/github@669bcff4b7700a5d6338770409fbbf0d0e33d645"
+    }
+  ],
+  "source": "dagger",
+  "engineVersion": "v0.13.3"
+}
