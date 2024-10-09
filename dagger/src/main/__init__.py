@@ -7,7 +7,7 @@ from dagger import dag, function, object_type
 
 PROD_IMAGE = "cgr.dev/chainguard/static:latest"
 DEVELOP_IMAGE = "ttl.sh/mortenlj-yakup"
-RUST_REPO = "rust-lang/rust"
+
 DEVELOP_VERSION = "0.1.0-develop"
 
 PLATFORM_TARGET = {
@@ -20,10 +20,9 @@ PLATFORM_TARGET = {
 class Yakup:
     @function
     async def rust(self) -> dagger.Container:
-        tag = await dag.github().get_latest_release(RUST_REPO).tag()
         tools = (
             dag.container()
-            .from_(f"rust:{tag}")
+            .from_(f"rust:1")
             .with_exec(["apt-get", "--yes", "update"])
             .with_exec(
                 ["apt-get", "--yes", "install", "cmake", "musl-tools", "gcc-aarch64-linux-gnu", "gcc-x86-64-linux-gnu"])
