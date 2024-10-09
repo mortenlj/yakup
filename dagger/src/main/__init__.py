@@ -5,7 +5,7 @@ from typing import Annotated
 from jinja2 import Template
 
 import dagger
-from dagger import dag, function, object_type, DefaultPath
+from dagger import dag, function, object_type, DefaultPath, Ignore
 
 PROD_IMAGE = "cgr.dev/chainguard/static:latest"
 DEVELOP_IMAGE = "ttl.sh/mortenlj-yakup"
@@ -20,7 +20,7 @@ PLATFORM_TARGET = {
 
 @object_type
 class Yakup:
-    source: Annotated[dagger.Directory, DefaultPath("/")]
+    source: Annotated[dagger.Directory, DefaultPath("/"), Ignore(["target", ".github", "dagger", ".idea"])]
 
     @function
     async def rust(self) -> dagger.Container:
