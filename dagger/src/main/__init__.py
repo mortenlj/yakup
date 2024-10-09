@@ -2,10 +2,10 @@ DEVELOP_VERSION = "0.1.0-develop"
 
 import asyncio
 
-import dagger
-from dagger import dag, function, object_type
 from jinja2 import Template
 
+import dagger
+from dagger import dag, function, object_type
 from .rust import Rust
 
 PLATFORM_TARGET = {
@@ -23,7 +23,11 @@ class Yakup:
         return (
             base
             .with_workdir("/src")
-            .with_directory("/src", source)
+            .with_directory("/src/api", source.directory("api"))
+            .with_directory("/src/controller", source.directory("controller"))
+            .with_directory("/src/.config", source.directory(".config"))
+            .with_file("/src/Cargo.toml", source.file("Cargo.toml"))
+            .with_file("/src/Cargo.lock", source.file("Cargo.lock"))
             .with_exec(["cargo", "chef", "prepare"])
             .file("recipe.json")
         )
@@ -37,19 +41,33 @@ class Yakup:
         return (
             base
             .with_workdir("/src")
-            .with_directory("/src", source)
             .with_file("/src/recipe.json", recipe)
-            .with_exec(["cargo", "chef", "cook", "--recipe-path", "/src/recipe.json", "--release", "--tests"] + target_args)
-            .with_exec(["cargo", "chef", "cook", "--recipe-path", "/src/recipe.json", "--release", "--clippy"] + target_args)
+            .with_exec(
+                ["cargo", "chef", "cook", "--recipe-path", "/src/recipe.json", "--release", "--tests"] + target_args)
+            .with_exec(
+                ["cargo", "chef", "cook", "--recipe-path", "/src/recipe.json", "--release", "--clippy"] + target_args)
             .with_exec(["cargo", "chef", "cook", "--recipe-path", "/src/recipe.json", "--release"] + target_args)
+        )
+
+    @function
+    async def project(self, source: dagger.Directory, target: str | None = None) -> dagger.Container:
+        """Prepares the provided source directory"""
+        cooked = await self.cook(source, target)
+        return (
+            cooked
+            .with_directory("/src/api", source.directory("api"))
+            .with_directory("/src/controller", source.directory("controller"))
+            .with_directory("/src/.config", source.directory(".config"))
+            .with_file("/src/Cargo.toml", source.file("Cargo.toml"))
+            .with_file("/src/Cargo.lock", source.file("Cargo.lock"))
         )
 
     async def test(self, source: dagger.Directory, target: str | None = None) -> dagger.Container:
         """Tests the provided source directory"""
-        cooked = await self.cook(source, target)
+        proj = await self.project(source, target)
         target_args = ["--target", target] if target else []
         return (
-            cooked
+            proj
             .with_exec(["cargo", "nextest", "run", "--profile", "ci", "--release"] + target_args)
             .with_exec(["cargo", "clippy", "--no-deps", "--release"] + target_args + ["--", "--deny", "warnings"])
         )
@@ -57,17 +75,16 @@ class Yakup:
     @function
     async def build(self, source: dagger.Directory, target: str | None = None) -> dagger.File:
         """Builds the provided source directory"""
-        cooked = await self.cook(source, target)
+        proj = await self.project(source, target)
         target_args = ["--target", target] if target else []
         return (
-            cooked
+            proj
             .with_exec(["cargo", "build", "--release", "--bin", "controller"] + target_args)
             .file(f"target/{target}/release/controller")
         )
 
     @function
-    async def docker(self, source: dagger.Directory, platform: dagger.Platform | None = None,
-                     version: str = DEVELOP_VERSION) -> dagger.Container:
+    async def docker(self, source: dagger.Directory, platform: dagger.Platform | None = None) -> dagger.Container:
         """Builds a Docker image for the provided source directory"""
         target = PLATFORM_TARGET.get(platform)
         yakup = await self.build(source, target)
@@ -80,6 +97,16 @@ class Yakup:
         )
 
     @function
+    async def crd(self, source: dagger.Directory) -> dagger.File:
+        """Generate CRD"""
+        proj = await self.project(source)
+        return (
+            proj
+            .with_exec(["cargo", "run", "--bin", "crd", "--release"])
+            .file("target/crd/application.yaml")
+        )
+
+    @function
     async def assemble_manifests(
             self, source: dagger.Directory, image: str = "ttl.sh/mortenlj-yakup", version: str = DEVELOP_VERSION
     ) -> dagger.File:
@@ -88,11 +115,13 @@ class Yakup:
         documents = []
         for filepath in await template_dir.entries():
             src = await template_dir.file(filepath).contents()
-            if not filepath.endswith(".j2"):
+            if filepath.endswith(".yaml"):
                 contents = src
-            else:
+            elif filepath.endswith(".j2"):
                 template = Template(src, enable_async=True)
                 contents = await template.render_async(image=image, version=version)
+            else:
+                continue
             if contents.startswith("---"):
                 documents.append(contents)
             else:
@@ -113,7 +142,7 @@ class Yakup:
         for v in ["latest", version]:
             variants = []
             for platform in platforms:
-                variants.append(self.docker(source, platform, version))
+                variants.append(self.docker(source, platform))
             cos.append(manifest.publish(f"{image}:{v}", platform_variants=await asyncio.gather(*variants)))
 
         return await asyncio.gather(*cos)
