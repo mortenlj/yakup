@@ -79,7 +79,7 @@ jobs:
         with:
           version: "latest"
           verb: call
-          args: test --source=. --output=target/junit.xml
+          args: test --output=target/junit.xml
           cloud-token: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -93,7 +93,7 @@ jobs:
         with:
           version: "latest"
           verb: call
-          args: assemble --source=. "--image=${REGISTRY}/yakup" "--version=${VERSION}-dagger"
+          args: assemble "--image=${REGISTRY}/yakup" "--version=${VERSION}-dagger"
           cloud-token: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
       - name: Save manifests for later deploy
         if: matrix.builder == 'dagger'

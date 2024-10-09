@@ -1,10 +1,11 @@
 import asyncio
 from datetime import datetime
+from typing import Annotated
 
 from jinja2 import Template
 
 import dagger
-from dagger import dag, function, object_type
+from dagger import dag, function, object_type, DefaultPath
 
 PROD_IMAGE = "cgr.dev/chainguard/static:latest"
 DEVELOP_IMAGE = "ttl.sh/mortenlj-yakup"
@@ -43,7 +44,7 @@ class Yakup:
         )
 
     @function
-    async def prepare(self, source: dagger.Directory) -> dagger.File:
+    async def prepare(self, source: Annotated[dagger.Directory, DefaultPath("/")]) -> dagger.File:
         """Plans the provided source directory"""
         base = await self.rust()
         return (
@@ -59,7 +60,11 @@ class Yakup:
         )
 
     @function
-    async def cook(self, source: dagger.Directory, target: str | None = None) -> dagger.Container:
+    async def cook(
+            self,
+            source: Annotated[dagger.Directory, DefaultPath("/")],
+            target: str | None = None
+    ) -> dagger.Container:
         """Cooks the provided source directory"""
         base = await self.rust()
         recipe = await self.prepare(source)
@@ -75,7 +80,11 @@ class Yakup:
         return pot
 
     @function
-    async def project(self, source: dagger.Directory, target: str | None = None) -> dagger.Container:
+    async def project(
+            self,
+            source: Annotated[dagger.Directory, DefaultPath("/")],
+            target: str | None = None
+    ) -> dagger.Container:
         """Prepares the provided source directory"""
         cooked = await self.cook(source, target)
         return (
@@ -88,7 +97,7 @@ class Yakup:
         )
 
     @function
-    async def test(self, source: dagger.Directory) -> dagger.File:
+    async def test(self, source: Annotated[dagger.Directory, DefaultPath("/")]) -> dagger.File:
         """Tests the provided source directory"""
         platform = await dag.default_platform()
         target = PLATFORM_TARGET.get(platform)
@@ -102,7 +111,11 @@ class Yakup:
         )
 
     @function
-    async def build(self, source: dagger.Directory, target: str | None = None) -> dagger.File:
+    async def build(
+            self,
+            source: Annotated[dagger.Directory, DefaultPath("/")],
+            target: str | None = None
+    ) -> dagger.File:
         """Builds the provided source directory"""
         proj = await self.project(source, target)
         if target is None:
@@ -114,7 +127,11 @@ class Yakup:
         )
 
     @function
-    async def docker(self, source: dagger.Directory, platform: dagger.Platform | None = None) -> dagger.Container:
+    async def docker(
+            self,
+            source: Annotated[dagger.Directory, DefaultPath("/")],
+            platform: dagger.Platform | None = None
+    ) -> dagger.Container:
         """Builds a Docker image for the provided source directory"""
         if platform is None:
             platform = await dag.default_platform()
@@ -129,7 +146,7 @@ class Yakup:
         )
 
     @function
-    async def crd(self, source: dagger.Directory) -> dagger.File:
+    async def crd(self, source: Annotated[dagger.Directory, DefaultPath("/")]) -> dagger.File:
         """Generate CRD"""
         target = PLATFORM_TARGET.get(await dag.default_platform())
         proj = await self.project(source, target)
@@ -142,7 +159,7 @@ class Yakup:
     @function
     async def assemble_manifests(
             self,
-            source: dagger.Directory,
+            source: Annotated[dagger.Directory, DefaultPath("/")],
             image: str = DEVELOP_IMAGE,
             version: str = DEVELOP_VERSION
     ) -> dagger.File:
@@ -168,7 +185,7 @@ class Yakup:
     @function
     async def publish(
             self,
-            source: dagger.Directory,
+            source: Annotated[dagger.Directory, DefaultPath("/")],
             image: str = DEVELOP_IMAGE,
             version: str = DEVELOP_VERSION
     ) -> list[str]:
@@ -191,7 +208,7 @@ class Yakup:
     @function
     async def assemble(
             self,
-            source: dagger.Directory,
+            source: Annotated[dagger.Directory, DefaultPath("/")],
             image: str = DEVELOP_IMAGE,
             version: str = DEVELOP_VERSION
     ) -> dagger.Directory:
