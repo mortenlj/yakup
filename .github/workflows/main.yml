@@ -73,6 +73,20 @@ jobs:
         with:
           name: manifests
           path: target/yaml/*.yaml
+      - name: Run tests
+        if: matrix.builder == 'dagger'
+        uses: dagger/dagger-for-github@v6
+        with:
+          version: "latest"
+          verb: call
+          args: publish --source=. --output=target/junit.xml
+          cloud-token: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: matrix.builder == 'dagger'
+        with:
+          files: |
+            target/junit.xml
       - name: Build and push images
         if: matrix.builder == 'dagger'
         uses: dagger/dagger-for-github@v6

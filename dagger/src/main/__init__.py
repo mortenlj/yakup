@@ -6,7 +6,8 @@ from jinja2 import Template
 
 import dagger
 from dagger import dag, function, object_type
-from .rust import Rust
+
+RUST_REPO = "rust-lang/rust"
 
 PLATFORM_TARGET = {
     dagger.Platform("linux/amd64"): "x86_64-unknown-linux-musl",  # a.k.a. x86_64
@@ -17,9 +18,33 @@ PLATFORM_TARGET = {
 @object_type
 class Yakup:
     @function
+    async def rust(self) -> dagger.Container:
+        tag = await dag.github().get_latest_release(RUST_REPO).tag()
+        tools = (
+            dag.container()
+            .from_(f"rust:{tag}")
+            .with_exec(["apt-get", "--yes", "update"])
+            .with_exec(
+                ["apt-get", "--yes", "install", "cmake", "musl-tools", "gcc-aarch64-linux-gnu", "gcc-x86-64-linux-gnu"])
+        )
+        for target in PLATFORM_TARGET.values():
+            tools = tools.with_exec(["rustup", "target", "add", target])
+        return (
+            tools
+            .with_exec(["rustup", "component", "add", "clippy"])
+            .with_env_variable("CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER", "/usr/bin/aarch64-linux-gnu-gcc")
+            .with_env_variable("CC_aarch64_unknown_linux_musl", "/usr/bin/aarch64-linux-gnu-gcc")
+            .with_env_variable("CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER", "/usr/bin/x86_64-linux-gnu-gcc")
+            .with_env_variable("CC_x86_64_unknown_linux_musl", "/usr/bin/x86_64-linux-gnu-gcc")
+            .with_exec(["cargo", "install", "cargo-binstall"])
+            .with_exec(["cargo", "binstall", "--no-confirm", "cargo-chef"])
+            .with_exec(["cargo", "binstall", "--no-confirm", "cargo-nextest"])
+        )
+
+    @function
     async def prepare(self, source: dagger.Directory) -> dagger.File:
         """Plans the provided source directory"""
-        base = await Rust().rust()
+        base = await self.rust()
         return (
             base
             .with_workdir("/src")
@@ -35,19 +60,18 @@ class Yakup:
     @function
     async def cook(self, source: dagger.Directory, target: str | None = None) -> dagger.Container:
         """Cooks the provided source directory"""
-        base = await Rust().rust()
+        base = await self.rust()
         recipe = await self.prepare(source)
-        target_args = ["--target", target] if target else []
-        return (
-            base
-            .with_workdir("/src")
-            .with_file("/src/recipe.json", recipe)
-            .with_exec(
-                ["cargo", "chef", "cook", "--recipe-path", "/src/recipe.json", "--release", "--tests"] + target_args)
-            .with_exec(
-                ["cargo", "chef", "cook", "--recipe-path", "/src/recipe.json", "--release", "--clippy"] + target_args)
-            .with_exec(["cargo", "chef", "cook", "--recipe-path", "/src/recipe.json", "--release"] + target_args)
-        )
+        if target is None:
+            target = PLATFORM_TARGET.get(await dag.default_platform())
+
+        pot = base.with_workdir("/src").with_file("/src/recipe.json", recipe)
+        for variant in (["--tests"], ["--clippy"], []):
+            pot = pot.with_exec(["cargo", "chef", "cook",
+                                 "--recipe-path", "/src/recipe.json", "--release",
+                                 "--target", target] +
+                                variant)
+        return pot
 
     @function
     async def project(self, source: dagger.Directory, target: str | None = None) -> dagger.Container:
@@ -62,30 +86,37 @@ class Yakup:
             .with_file("/src/Cargo.lock", source.file("Cargo.lock"))
         )
 
-    async def test(self, source: dagger.Directory, target: str | None = None) -> dagger.Container:
+    @function
+    async def test(self, source: dagger.Directory) -> dagger.File:
         """Tests the provided source directory"""
+        platform = await dag.default_platform()
+        target = PLATFORM_TARGET.get(platform)
         proj = await self.project(source, target)
-        target_args = ["--target", target] if target else []
         return (
             proj
-            .with_exec(["cargo", "nextest", "run", "--profile", "ci", "--release"] + target_args)
-            .with_exec(["cargo", "clippy", "--no-deps", "--release"] + target_args + ["--", "--deny", "warnings"])
+            .with_exec(
+                ["cargo", "clippy", "--no-deps", "--release", "--target", target, "--", "--deny", "warnings"])
+            .with_exec(["cargo", "nextest", "run", "--profile", "ci", "--release", "--target", target])
+            .file("target/nextest/ci/junit.xml")
         )
 
     @function
     async def build(self, source: dagger.Directory, target: str | None = None) -> dagger.File:
         """Builds the provided source directory"""
         proj = await self.project(source, target)
-        target_args = ["--target", target] if target else []
+        if target is None:
+            target = PLATFORM_TARGET.get(await dag.default_platform())
         return (
             proj
-            .with_exec(["cargo", "build", "--release", "--bin", "controller"] + target_args)
+            .with_exec(["cargo", "build", "--release", "--bin", "controller", "--target", target])
             .file(f"target/{target}/release/controller")
         )
 
     @function
     async def docker(self, source: dagger.Directory, platform: dagger.Platform | None = None) -> dagger.Container:
         """Builds a Docker image for the provided source directory"""
+        if platform is None:
+            platform = await dag.default_platform()
         target = PLATFORM_TARGET.get(platform)
         yakup = await self.build(source, target)
         return (
@@ -99,16 +130,20 @@ class Yakup:
     @function
     async def crd(self, source: dagger.Directory) -> dagger.File:
         """Generate CRD"""
-        proj = await self.project(source)
+        target = PLATFORM_TARGET.get(await dag.default_platform())
+        proj = await self.project(source, target)
         return (
             proj
-            .with_exec(["cargo", "run", "--bin", "crd", "--release"])
+            .with_exec(["cargo", "run", "--bin", "crd", "--release", "--target", target])
             .file("target/crd/application.yaml")
         )
 
     @function
     async def assemble_manifests(
-            self, source: dagger.Directory, image: str = "ttl.sh/mortenlj-yakup", version: str = DEVELOP_VERSION
+            self,
+            source: dagger.Directory,
+            image: str = "ttl.sh/mortenlj-yakup",
+            version: str = DEVELOP_VERSION
     ) -> dagger.File:
         """Assemble manifests"""
         template_dir = source.directory("deploy")
@@ -131,13 +166,17 @@ class Yakup:
 
     @function
     async def publish(
-            self, source: dagger.Directory, image: str = "ttl.sh/mortenlj-yakup", version: str = DEVELOP_VERSION
+            self,
+            source: dagger.Directory,
+            image: str = "ttl.sh/mortenlj-yakup",
+            version: str = DEVELOP_VERSION
     ) -> list[str]:
         """Publish the application container after building and testing it on-the-fly"""
-        platforms = [
+        platforms = {
+            await dag.default_platform(),
             dagger.Platform("linux/amd64"),  # a.k.a. x86_64
             dagger.Platform("linux/arm64"),  # a.k.a. aarch64
-        ]
+        }
         cos = []
         manifest = dag.container()
         for v in ["latest", version]:
