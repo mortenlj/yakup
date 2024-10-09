@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 
 from jinja2 import Template
 
@@ -8,7 +9,7 @@ from dagger import dag, function, object_type
 PROD_IMAGE = "cgr.dev/chainguard/static:latest"
 DEVELOP_IMAGE = "ttl.sh/mortenlj-yakup"
 
-DEVELOP_VERSION = "0.1.0-develop"
+DEVELOP_VERSION = f"{datetime.now().strftime("%Y%m%d%H%M%S")}-develop"
 
 PLATFORM_TARGET = {
     dagger.Platform("linux/amd64"): "x86_64-unknown-linux-musl",  # a.k.a. x86_64
