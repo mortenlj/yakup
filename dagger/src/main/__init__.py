@@ -5,6 +5,8 @@ from jinja2 import Template
 import dagger
 from dagger import dag, function, object_type
 
+PROD_IMAGE = "cgr.dev/chainguard/static:latest"
+DEVELOP_IMAGE = "ttl.sh/mortenlj-yakup"
 RUST_REPO = "rust-lang/rust"
 DEVELOP_VERSION = "0.1.0-develop"
 
@@ -120,7 +122,7 @@ class Yakup:
         yakup = await self.build(source, target)
         return (
             dag.container(platform=platform)
-            .from_("cgr.dev/chainguard/static:latest")
+            .from_(PROD_IMAGE)
             .with_workdir("/bin")
             .with_file("/bin/yakup", yakup)
             .with_entrypoint(["/bin/yakup"])
@@ -141,7 +143,7 @@ class Yakup:
     async def assemble_manifests(
             self,
             source: dagger.Directory,
-            image: str = "ttl.sh/mortenlj-yakup",
+            image: str = DEVELOP_IMAGE,
             version: str = DEVELOP_VERSION
     ) -> dagger.File:
         """Assemble manifests"""
@@ -167,7 +169,7 @@ class Yakup:
     async def publish(
             self,
             source: dagger.Directory,
-            image: str = "ttl.sh/mortenlj-yakup",
+            image: str = DEVELOP_IMAGE,
             version: str = DEVELOP_VERSION
     ) -> list[str]:
         """Publish the application container after building and testing it on-the-fly"""
@@ -190,7 +192,7 @@ class Yakup:
     async def assemble(
             self,
             source: dagger.Directory,
-            image: str = "ttl.sh/mortenlj-yakup",
+            image: str = DEVELOP_IMAGE,
             version: str = DEVELOP_VERSION
     ) -> dagger.Directory:
         """Collect all deployment artifacts (container, crd and manifests)"""
