@@ -1,5 +1,3 @@
-DEVELOP_VERSION = "0.1.0-develop"
-
 import asyncio
 
 from jinja2 import Template
@@ -8,6 +6,7 @@ import dagger
 from dagger import dag, function, object_type
 
 RUST_REPO = "rust-lang/rust"
+DEVELOP_VERSION = "0.1.0-develop"
 
 PLATFORM_TARGET = {
     dagger.Platform("linux/amd64"): "x86_64-unknown-linux-musl",  # a.k.a. x86_64
@@ -186,3 +185,31 @@ class Yakup:
             cos.append(manifest.publish(f"{image}:{v}", platform_variants=await asyncio.gather(*variants)))
 
         return await asyncio.gather(*cos)
+
+    @function
+    async def assemble(
+            self,
+            source: dagger.Directory,
+            image: str = "ttl.sh/mortenlj-yakup",
+            version: str = DEVELOP_VERSION
+    ) -> dagger.Directory:
+        """Collect all deployment artifacts (container, crd and manifests)"""
+        outputs = dag.directory()
+        files = await asyncio.gather(
+            self.publish_to_file(self.publish(source, image, version)),
+            self.crd(source),
+            self.assemble_manifests(source, image, version),
+        )
+        for f in files:
+            filename = await f.name()
+            outputs = outputs.with_file(filename, f)
+        return outputs
+
+    @staticmethod
+    async def publish_to_file(publish_task) -> dagger.File:
+        image_tags = await publish_task
+        return (
+            dag.directory()
+            .with_new_file("image_tags.txt", "\n".join(image_tags))
+            .file("image_tags.txt")
+        )

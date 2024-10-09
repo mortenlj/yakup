@@ -87,36 +87,20 @@ jobs:
         with:
           files: |
             target/junit.xml
-      - name: Build and push images
+      - name: Assemble manifests and push images
         if: matrix.builder == 'dagger'
         uses: dagger/dagger-for-github@v6
         with:
           version: "latest"
           verb: call
-          args: publish --source=. "--image=${REGISTRY}/yakup" "--version=${VERSION}-dagger"
-          cloud-token: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
-      - name: Generate CRD
-        if: matrix.builder == 'dagger'
-        uses: dagger/dagger-for-github@v6
-        with:
-          version: "latest"
-          verb: call
-          args: crd --source=. --output=target/yaml-dagger/application.yaml
-          cloud-token: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
-      - name: Assemble manifests
-        if: matrix.builder == 'dagger'
-        uses: dagger/dagger-for-github@v6
-        with:
-          version: "latest"
-          verb: call
-          args: assemble-manifests --source=. "--image=${REGISTRY}/yakup" "--version=${VERSION}-dagger" --output=target/yaml-dagger/deploy.yaml
+          args: assemble --source=. "--image=${REGISTRY}/yakup" "--version=${VERSION}-dagger"
           cloud-token: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
       - name: Save manifests for later deploy
         if: matrix.builder == 'dagger'
         uses: actions/upload-artifact@v4
         with:
           name: manifests-dagger
-          path: target/yaml-dagger/*.yaml
+          path: target/assemble/*.yaml
 
   deploy:
     name: Deploy
