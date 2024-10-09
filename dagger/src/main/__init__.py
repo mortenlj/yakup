@@ -126,6 +126,7 @@ class Yakup:
                 documents.append(contents)
             else:
                 documents.append("---\n" + contents)
+        documents.append("")
         return await source.with_new_file("deploy.yaml", "\n".join(documents)).file("deploy.yaml")
 
     @function
