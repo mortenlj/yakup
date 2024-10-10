@@ -95,7 +95,7 @@ jobs:
         with:
           version: "latest"
           verb: call
-          args: assemble "--image=${REGISTRY}/yakup" "--version=${VERSION}-dagger"
+          args: assemble "--image=${REGISTRY}/yakup" "--version=${VERSION}-dagger" --output=target/assemble
           cloud-token: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
       - name: Save manifests for later deploy
         if: matrix.builder == 'dagger'
