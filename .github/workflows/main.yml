@@ -46,26 +46,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Run tests
-        uses: dagger/dagger-for-github@v6
+        uses: dagger/dagger-for-github@6b6e9832f7dffd6cd9cdd989a577bb2cbfc45432 # v6
         with:
           version: "latest"
           verb: call
           args: test --output=target/junit.xml
           cloud-token: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        uses: EnricoMi/publish-unit-test-result-action@82082dac68ad6a19d980f8ce817e108b9f496c2a # v2
         with:
           files: |
             target/junit.xml
       - name: Assemble manifests and push images
-        uses: dagger/dagger-for-github@v6
+        uses: dagger/dagger-for-github@6b6e9832f7dffd6cd9cdd989a577bb2cbfc45432 # v6
         with:
           version: "latest"
           verb: call
           args: assemble "--image=${REGISTRY}/yakup" "--version=${VERSION}" --output=target/assemble
           cloud-token: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
       - name: Save manifests for later deploy
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
         with:
           name: manifests
           path: target/assemble/*.yaml
@@ -79,7 +79,7 @@ jobs:
       - build
     steps:
       - name: Download manifests from build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
         with:
           name: manifests
       - name: Prepare kubeconfig
@@ -115,7 +115,7 @@ jobs:
       packages: write
     steps:
       - name: Cleanup main images
-        uses: dataaxiom/ghcr-cleanup-action@v1.0.13
+        uses: dataaxiom/ghcr-cleanup-action@98b4022383d6ddb70ccbf6a378b4d8c67a60f066 # v1.0.13
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           package: yakup/yakup
@@ -126,7 +126,7 @@ jobs:
           delete-orphaned-images: true
           delete-partial-images: true
       - name: Cleanup old cache images
-        uses: dataaxiom/ghcr-cleanup-action@v1.0.13
+        uses: dataaxiom/ghcr-cleanup-action@98b4022383d6ddb70ccbf6a378b4d8c67a60f066 # v1.0.13
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           package: yakup/cache
