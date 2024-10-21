@@ -35,6 +35,13 @@ operations:
           app.kubernetes.io/name: test-app
         name: test-app
         namespace: default
+        ownerReferences:
+          - apiVersion: yakup.ibidem.no/v1
+            kind: Application
+            name: test-app
+            uid: ""
+            blockOwnerDeletion: true
+            controller: true
       spec:
         replicas: 1
         selector:
@@ -139,6 +146,13 @@ operations:
           app.kubernetes.io/name: test-app
         name: test-app
         namespace: default
+        ownerReferences:
+          - apiVersion: yakup.ibidem.no/v1
+            kind: Application
+            name: test-app
+            uid: ""
+            blockOwnerDeletion: true
+            controller: true
       spec:
         ports:
           - name: http

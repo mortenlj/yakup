@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
-use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, OwnerReference};
 use k8s_openapi::serde::Serialize;
 use kube::api::DynamicObject;
 use kube::api::Resource;
@@ -16,6 +16,23 @@ use crate::models::Operation;
 
 mod deployment;
 mod service;
+
+trait Owner {
+    fn owner_reference(&self) -> OwnerReference;
+}
+
+impl Owner for Application {
+    fn owner_reference(&self) -> OwnerReference {
+        OwnerReference {
+            api_version: Application::api_version(&()).to_string(),
+            kind: Application::kind(&()).to_string(),
+            name: self.name_any(),
+            uid: self.uid().unwrap_or_default(),
+            controller: Some(true),
+            block_owner_deletion: Some(true),
+        }
+    }
+}
 
 #[instrument()]
 pub fn process(app: Arc<Application>) -> Result<Vec<Operation>> {
@@ -32,6 +49,7 @@ pub fn process(app: Arc<Application>) -> Result<Vec<Operation>> {
         name: Some(app_name.clone()),
         namespace: Some(namespace.clone()),
         labels: Some(labels.clone()),
+        owner_references: Some(vec![app.owner_reference()]),
         ..Default::default()
     };
 
