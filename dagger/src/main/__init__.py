@@ -40,6 +40,8 @@ class Yakup:
             .with_env_variable("CC_aarch64_unknown_linux_musl", "/usr/bin/aarch64-linux-gnu-gcc")
             .with_env_variable("CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER", "/usr/bin/x86_64-linux-gnu-gcc")
             .with_env_variable("CC_x86_64_unknown_linux_musl", "/usr/bin/x86_64-linux-gnu-gcc")
+            .with_env_variable("CARGO_HOME", "/cargo")
+            .with_mounted_cache("/cargo", dag.cache_volume("cargo_cache"))
             .with_exec(["cargo", "install", "cargo-binstall"])
             .with_exec(["cargo", "binstall", "--no-confirm", "cargo-chef"])
             .with_exec(["cargo", "binstall", "--no-confirm", "cargo-nextest"])
