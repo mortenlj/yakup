@@ -29,6 +29,67 @@ pub mod v1 {
         #[serde(default)]
         #[serde(skip_serializing_if = "Option::is_none")]
         pub probes: Option<Probes>,
+
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pub env: Vec<EnvValue>,
+
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pub env_from: Vec<EnvFrom>,
+
+        //     filesFrom:
+        //       - secret:
+        //           name: my-other-secret
+        //           mountPath: /somewhere
+        //       - configMap:
+        //           name: my-third-cm
+        //           mountPath: /config
+        //       - emptyDir:
+        //           medium: Memory
+        //           mountPath: /tmp
+        //       - emptyDir:
+        //           medium: Disk
+        //           mountPath: /mnt
+        //       - persistentVolumeClaim:
+        //           name: my-pvc
+        //           mountPath: /tmp
+        //     resources:
+        //       limits:
+        //         cpu: 500m
+        //         memory: 512Mi
+        //       requests:
+        //         cpu: 200m
+        //         memory: 256Mi
+        //   replicas:
+        //     min: 1
+        //     max: 5
+        //     autoscaling:
+        //       enabled: true
+        //       cpu: 50%
+        //       memory: 70%
+        //       kafka:
+        //         - topic: mytopic
+        //           group: losGroupos
+        //           maxLag: 123
+        //  # Communication
+        //   ingress:
+        //     routes:
+        //       - host: "myapp.nav.no"
+        //         path: "/asd"
+        //         port: 8080 # container port
+        //         type: http # default
+        //       - host: "grpc.nav.no"
+        //         path: "/service"
+        //         port: 8082
+        //         type: grpc
+        //       - host: "myapp-admin.nav.no"
+        //         path: "/"
+        //         port: 8081
+        //  metrics:
+        //     enabled: true
+        //     path: /metrics
+        //     port: 8080
     }
 }
 
@@ -37,6 +98,22 @@ pub mod v1 {
 pub struct ApplicationStatus {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub conditions: Vec<Condition>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct EnvValue {
+    pub name: String,
+    pub value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct EnvFrom {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub config_map: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secret: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
