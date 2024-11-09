@@ -1,7 +1,9 @@
 import asyncio
+import functools
 from datetime import datetime
 from typing import Annotated
 
+import aiometer
 from jinja2 import Template
 
 import dagger
@@ -186,22 +188,15 @@ class Yakup:
             self,
             image: str = DEVELOP_IMAGE,
             version: str = DEVELOP_VERSION
-    ) -> list[str]:
+    ) -> tuple[str, str]:
         """Publish the application container after building and testing it on-the-fly"""
-        platforms = {
-            await dag.default_platform(),
-            dagger.Platform("linux/amd64"),  # a.k.a. x86_64
-            dagger.Platform("linux/arm64"),  # a.k.a. aarch64
-        }
-        cos = []
+        platforms = PLATFORM_TARGET.keys() | {await dag.default_platform()}
+        variants = await aiometer.run_all([functools.partial(self.docker, platform) for platform in platforms])
         manifest = dag.container()
-        for v in ["latest", version]:
-            variants = []
-            for platform in platforms:
-                variants.append(self.docker(platform))
-            cos.append(manifest.publish(f"{image}:{v}", platform_variants=await asyncio.gather(*variants)))
-
-        return await asyncio.gather(*cos)
+        return await asyncio.gather(
+            manifest.publish(f"{image}:{version}", platform_variants=variants),
+            manifest.publish(f"{image}:latest", platform_variants=variants)
+        )
 
     @function
     async def assemble(

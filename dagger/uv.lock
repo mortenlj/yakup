@@ -2,6 +2,18 @@ version = 1
 requires-python = ">=3.12"
 
 [[package]]
+name = "aiometer"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ca/94/2aed63a1f34116be83cb07f7d5f74f9d85cf06a920076a94307ba2ba385a/aiometer-0.5.0.tar.gz", hash = "sha256:1d441ad3c16eaa56d438e5f9a2f9fbccdb29f6140fb36f9cb68183545ec48691", size = 18256 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8d/48/bfed7b1373890a7946cd7523c125e6469a7add944712cb328be190032b0e/aiometer-0.5.0-py3-none-any.whl", hash = "sha256:57e54a067e6918504844610da23aabf6e179cb0f01104503b3db4bfb39f5e1f2", size = 12316 },
+]
+
+[[package]]
 name = "anyio"
 version = "4.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -260,12 +272,14 @@ name = "main"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "aiometer" },
     { name = "dagger-io" },
     { name = "jinja2" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "aiometer", specifier = ">=0.5.0" },
     { name = "dagger-io", editable = "sdk" },
     { name = "jinja2", specifier = ">=3.1.4" },
 ]

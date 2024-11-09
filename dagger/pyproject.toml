@@ -3,6 +3,7 @@ name = "main"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "aiometer>=0.5.0",
     "dagger-io",
     "jinja2>=3.1.4",
 ]
