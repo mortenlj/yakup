@@ -10,7 +10,7 @@ use kube::discovery::ApiResource;
 use kube::ResourceExt;
 use tracing::instrument;
 
-use api::Application;
+use api::v1::Application;
 
 use crate::models::Operation;
 

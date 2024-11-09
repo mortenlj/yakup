@@ -7,7 +7,7 @@ use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 use tracing::instrument;
 
-use api::Application;
+use api::v1::Application;
 
 use crate::models::Operation;
 use crate::resource_creator::to_dynamic_object;

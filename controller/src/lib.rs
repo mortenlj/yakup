@@ -18,7 +18,7 @@ use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{EnvFilter, Registry};
 
-use api::Application;
+use api::v1::Application;
 
 pub mod models;
 pub mod resource_creator;

@@ -4,28 +4,32 @@ use kube::CustomResource;
 use schemars::JsonSchema;
 use std::fmt::Display;
 
-#[derive(CustomResource, Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
-#[kube(
-    group = "yakup.ibidem.no",
-    version = "v1",
-    kind = "Application",
-    namespaced,
-    status = "ApplicationStatus",
-    shortname = "app",
-    doc = "Yet Another Application Kind",
-    printcolumn = r#"{"name":"Image","type":"string","jsonPath":".spec.image"}"#
-)]
-#[serde(rename_all = "camelCase")]
-pub struct ApplicationSpec {
-    pub image: String,
+pub mod v1 {
+    use super::*;
 
-    #[serde(default)]
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub ports: Vec<Port>,
+    #[derive(CustomResource, Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+    #[kube(
+        group = "yakup.ibidem.no",
+        version = "v1",
+        kind = "Application",
+        namespaced,
+        status = "ApplicationStatus",
+        shortname = "app",
+        doc = "Yet Another Application Kind",
+        printcolumn = r#"{"name":"Image","type":"string","jsonPath":".spec.image"}"#
+    )]
+    #[serde(rename_all = "camelCase")]
+    pub struct ApplicationSpec {
+        pub image: String,
 
-    #[serde(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub probes: Option<Probes>,
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pub ports: Vec<Port>,
+
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub probes: Option<Probes>,
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]

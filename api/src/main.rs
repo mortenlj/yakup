@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use kube::CustomResourceExt;
 
-use api::Application;
+use api::v1::Application;
 
 pub fn main() -> Result<()> {
     let crd_file = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../target/crd/application.yaml");

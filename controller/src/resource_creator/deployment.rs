@@ -8,7 +8,8 @@ use kube::ResourceExt;
 use tracing::instrument;
 
 use anyhow::Result;
-use api::{Application, Probe, Probes};
+use api::v1::Application;
+use api::{Probe, Probes};
 use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 
 use crate::models::Operation;

@@ -8,7 +8,7 @@ use pretty_assertions::assert_eq;
 use serde::{Deserialize, Serialize};
 use test_generator::test_resources;
 
-use api::{Application, ApplicationSpec};
+use api::v1::{Application, ApplicationSpec};
 use controller::models::Operation;
 use controller::resource_creator::process;
 
