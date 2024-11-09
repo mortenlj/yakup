@@ -46,6 +46,7 @@ pub(crate) fn process(
                         name: app.name_any().clone(),
                         image: Some(app.spec.image.clone()),
                         ports: generate_ports(app),
+                        env: Some(app.spec.env.iter().map(|e| e.to_kube()).collect()),
                         env_from: from_config.env_from,
                         volume_mounts: from_config.volume_mounts,
                         liveness_probe: generate_probe(app, |probes: &Probes| probes.liveness.clone()),
@@ -73,9 +74,20 @@ fn generate_from_config(app: &Arc<Application>) -> FromConfig {
     let mut volumes = vec![];
 
     for name in [format!("{}-db", app.name_any()), app.name_any()].iter() {
-        env_from.extend(generate_env_from(name.clone()));
-        volume_mounts.extend(genereate_volume_mounts(name.clone()));
-        volumes.extend(generate_volumes(name.clone()));
+        env_from.extend(generate_env_from(name));
+        volume_mounts.extend(genereate_volume_mounts(name));
+        volumes.extend(generate_volumes(name));
+    }
+
+    for ef in app.spec.env_from.iter() {
+        match &ef.config_map {
+            Some(name) => env_from.push(generate_env_from_configmap(&name)),
+            None => {}
+        }
+        match &ef.secret {
+            Some(name) => env_from.push(generate_env_from_secret(&name)),
+            None => {}
+        }
     }
 
     FromConfig {
@@ -140,7 +152,7 @@ fn generate_probe(
     }
 }
 
-fn generate_volumes(app_name: String) -> Vec<Volume> {
+fn generate_volumes(app_name: &String) -> Vec<Volume> {
     vec![
         Volume {
             name: format!("{}-configmap", app_name.clone()),
@@ -165,7 +177,7 @@ fn generate_volumes(app_name: String) -> Vec<Volume> {
     ]
 }
 
-fn genereate_volume_mounts(app_name: String) -> Vec<VolumeMount> {
+fn genereate_volume_mounts(app_name: &String) -> Vec<VolumeMount> {
     vec![
         VolumeMount {
             name: format!("{}-configmap", app_name.clone()),
@@ -182,22 +194,30 @@ fn genereate_volume_mounts(app_name: String) -> Vec<VolumeMount> {
     ]
 }
 
-fn generate_env_from(app_name: String) -> Vec<EnvFromSource> {
+fn generate_env_from_configmap(name: &String) -> EnvFromSource {
+    EnvFromSource {
+        config_map_ref: Some(ConfigMapEnvSource {
+            name: name.clone(),
+            optional: Some(true),
+        }),
+        ..Default::default()
+    }
+}
+
+fn generate_env_from_secret(name: &String) -> EnvFromSource {
+    EnvFromSource {
+        secret_ref: Some(SecretEnvSource {
+            name: name.clone(),
+            optional: Some(true),
+        }),
+        ..Default::default()
+    }
+}
+
+fn generate_env_from(app_name: &String) -> Vec<EnvFromSource> {
     vec![
-        EnvFromSource {
-            config_map_ref: Some(ConfigMapEnvSource {
-                name: app_name.clone(),
-                optional: Some(true),
-            }),
-            ..Default::default()
-        },
-        EnvFromSource {
-            secret_ref: Some(SecretEnvSource {
-                name: app_name.clone(),
-                optional: Some(true),
-            }),
-            ..Default::default()
-        },
+        generate_env_from_configmap(app_name),
+        generate_env_from_secret(app_name),
     ]
 }
 

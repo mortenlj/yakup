@@ -107,6 +107,16 @@ pub struct EnvValue {
     pub value: String,
 }
 
+impl EnvValue {
+    pub fn to_kube(&self) -> k8s_openapi::api::core::v1::EnvVar {
+        k8s_openapi::api::core::v1::EnvVar {
+            name: self.name.clone(),
+            value: Some(self.value.clone()),
+            value_from: None,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct EnvFrom {

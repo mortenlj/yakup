@@ -23,6 +23,12 @@ app_spec:
       port: 9090
     - kind: tcp
       port: 1234
+  env:
+    - name: ENV_NAME
+      value: "test"
+  envFrom:
+    - configMap: test-config-map
+    - secret: test-secret
 
 operations:
   - operation: CreateOrUpdate
@@ -89,6 +95,9 @@ operations:
                     containerPort: 9090
                   - name: tcp
                     containerPort: 1234
+                env:
+                  - name: ENV_NAME
+                    value: test
                 envFrom:
                   - configMapRef:
                       name: test-app-db
@@ -101,6 +110,12 @@ operations:
                       optional: true
                   - secretRef:
                       name: test-app
+                      optional: true
+                  - configMapRef:
+                      name: test-config-map
+                      optional: true
+                  - secretRef:
+                      name: test-secret
                       optional: true
                 volumeMounts:
                   - mountPath: /var/run/config/yakup.ibidem.no/test-app-db
