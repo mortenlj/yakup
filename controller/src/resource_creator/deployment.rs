@@ -80,13 +80,11 @@ fn generate_from_config(app: &Arc<Application>) -> FromConfig {
     }
 
     for ef in app.spec.env_from.iter() {
-        match &ef.config_map {
-            Some(name) => env_from.push(generate_env_from_configmap(&name)),
-            None => {}
+        if let Some(name) = &ef.config_map {
+            env_from.push(generate_env_from_configmap(name))
         }
-        match &ef.secret {
-            Some(name) => env_from.push(generate_env_from_secret(&name)),
-            None => {}
+        if let Some(name) = &ef.secret {
+            env_from.push(generate_env_from_secret(name))
         }
     }
 
@@ -152,12 +150,12 @@ fn generate_probe(
     }
 }
 
-fn generate_volumes(app_name: &String) -> Vec<Volume> {
+fn generate_volumes(app_name: &str) -> Vec<Volume> {
     vec![
         Volume {
-            name: format!("{}-configmap", app_name.clone()),
+            name: format!("{}-configmap", app_name.to_owned()),
             config_map: Some(ConfigMapVolumeSource {
-                name: app_name.clone(),
+                name: app_name.to_owned(),
                 optional: Some(true),
                 default_mode: Some(0o644),
                 ..Default::default()
@@ -165,9 +163,9 @@ fn generate_volumes(app_name: &String) -> Vec<Volume> {
             ..Default::default()
         },
         Volume {
-            name: format!("{}-secret", app_name.clone()),
+            name: format!("{}-secret", app_name.to_owned()),
             secret: Some(SecretVolumeSource {
-                secret_name: Some(app_name.clone()),
+                secret_name: Some(app_name.to_owned()),
                 optional: Some(true),
                 default_mode: Some(0o644),
                 ..Default::default()
@@ -177,44 +175,44 @@ fn generate_volumes(app_name: &String) -> Vec<Volume> {
     ]
 }
 
-fn genereate_volume_mounts(app_name: &String) -> Vec<VolumeMount> {
+fn genereate_volume_mounts(app_name: &str) -> Vec<VolumeMount> {
     vec![
         VolumeMount {
-            name: format!("{}-configmap", app_name.clone()),
-            mount_path: format!("/var/run/config/yakup.ibidem.no/{}", app_name.clone()),
+            name: format!("{}-configmap", app_name.to_owned()),
+            mount_path: format!("/var/run/config/yakup.ibidem.no/{}", app_name.to_owned()),
             read_only: Some(true),
             ..Default::default()
         },
         VolumeMount {
-            name: format!("{}-secret", app_name.clone()),
-            mount_path: format!("/var/run/secrets/yakup.ibidem.no/{}", app_name.clone()),
+            name: format!("{}-secret", app_name.to_owned()),
+            mount_path: format!("/var/run/secrets/yakup.ibidem.no/{}", app_name.to_owned()),
             read_only: Some(true),
             ..Default::default()
         },
     ]
 }
 
-fn generate_env_from_configmap(name: &String) -> EnvFromSource {
+fn generate_env_from_configmap(name: &str) -> EnvFromSource {
     EnvFromSource {
         config_map_ref: Some(ConfigMapEnvSource {
-            name: name.clone(),
+            name: name.to_owned(),
             optional: Some(true),
         }),
         ..Default::default()
     }
 }
 
-fn generate_env_from_secret(name: &String) -> EnvFromSource {
+fn generate_env_from_secret(name: &str) -> EnvFromSource {
     EnvFromSource {
         secret_ref: Some(SecretEnvSource {
-            name: name.clone(),
+            name: name.to_owned(),
             optional: Some(true),
         }),
         ..Default::default()
     }
 }
 
-fn generate_env_from(app_name: &String) -> Vec<EnvFromSource> {
+fn generate_env_from(app_name: &str) -> Vec<EnvFromSource> {
     vec![
         generate_env_from_configmap(app_name),
         generate_env_from_secret(app_name),
