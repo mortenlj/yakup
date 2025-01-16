@@ -93,7 +93,7 @@ jobs:
         with:
           network_id: ${{ secrets.ZEROTIER_NETWORK_ID }}
           api_accesstoken: ${{ secrets.ZEROTIER_API_ACCESSTOKEN }}
-          ping_target: k3s2.home.ibidem.no
+          ping_target: k3s.home.ibidem.no
       - name: Run kubectl apply
         run: |
           kubectl apply --filename=application.yaml --wait=true --timeout=60s
