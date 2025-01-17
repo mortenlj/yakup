@@ -29,6 +29,13 @@ app_spec:
   envFrom:
     - configMap: test-config-map
     - secret: test-secret
+  resources:
+    limits:
+      memory: 128Mi
+      cpu: 500m
+    requests:
+        memory: 64Mi
+        cpu: 250m
 
 operations:
   - operation: CreateOrUpdate
@@ -118,6 +125,13 @@ operations:
                   - secretRef:
                       name: test-secret
                       optional: true
+                resources:
+                  limits:
+                    memory: 128Mi
+                    cpu: 500m
+                  requests:
+                    memory: 64Mi
+                    cpu: 250m
                 volumeMounts:
                   - mountPath: /var/run/config/yakup.ibidem.no/test-app-db
                     name: test-app-db-configmap

@@ -1,3 +1,4 @@
+use k8s_openapi::api::core::v1::ResourceRequirements;
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::Condition;
 use k8s_openapi::serde::{Deserialize, Serialize};
 use kube::CustomResource;
@@ -38,6 +39,12 @@ pub mod v1 {
         #[serde(skip_serializing_if = "Vec::is_empty")]
         pub env_from: Vec<EnvFrom>,
 
+        /// Compute Resources required by this application.
+        /// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub resources: Option<ResourceRequirements>,
+
         //     filesFrom:
         //       - secret:
         //           name: my-other-secret
@@ -54,13 +61,6 @@ pub mod v1 {
         //       - persistentVolumeClaim:
         //           name: my-pvc
         //           mountPath: /tmp
-        //     resources:
-        //       limits:
-        //         cpu: 500m
-        //         memory: 512Mi
-        //       requests:
-        //         cpu: 200m
-        //         memory: 256Mi
         //   replicas:
         //     min: 1
         //     max: 5

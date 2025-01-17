@@ -53,6 +53,7 @@ pub(crate) fn process(
                         liveness_probe: generate_probe(app, |probes: &Probes| probes.liveness.clone()),
                         readiness_probe: generate_probe(app, |probes: &Probes| probes.readiness.clone()),
                         startup_probe: generate_probe(app, |probes: &Probes| probes.startup.clone()),
+                        resources: app.spec.resources.clone(),
                         ..Default::default()
                     }],
                     volumes: from_config.volumes,
