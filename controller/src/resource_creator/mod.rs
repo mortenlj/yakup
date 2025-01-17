@@ -16,6 +16,7 @@ use crate::models::Operation;
 
 mod deployment;
 mod service;
+mod service_account;
 
 trait Owner {
     fn owner_reference(&self) -> OwnerReference;
@@ -60,6 +61,7 @@ pub fn process(app: Arc<Application>) -> Result<Vec<Operation>> {
         labels.clone(),
     )?);
     operations.extend(service::process(&app, object_meta.clone(), labels.clone())?);
+    operations.extend(service_account::process(&app, object_meta.clone(), labels.clone())?);
     Ok(operations)
 }
 

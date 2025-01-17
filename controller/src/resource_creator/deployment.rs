@@ -42,6 +42,7 @@ pub(crate) fn process(
                     ..Default::default()
                 }),
                 spec: Some(PodSpec {
+                    service_account_name: Some(app.name_any().clone()),
                     containers: vec![Container {
                         name: app.name_any().clone(),
                         image: Some(app.spec.image.clone()),

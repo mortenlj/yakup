@@ -10,3 +10,6 @@ operations:
   - operation: DeleteIfExists
     object:
       kind: Service
+  - operation: CreateOrUpdate
+    object:
+      kind: ServiceAccount

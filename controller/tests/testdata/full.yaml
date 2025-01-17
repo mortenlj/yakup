@@ -60,6 +60,7 @@ operations:
               app.kubernetes.io/managed-by: yakup
               app.kubernetes.io/name: test-app
           spec:
+            serviceAccountName: test-app
             containers:
               - image: 'busybox:latest'
                 name: test-app
@@ -182,3 +183,21 @@ operations:
         selector:
           app.kubernetes.io/managed-by: yakup
           app.kubernetes.io/name: test-app
+  - operation: CreateOrUpdate
+    object:
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        labels:
+          app.kubernetes.io/managed-by: yakup
+          app.kubernetes.io/name: test-app
+        name: test-app
+        namespace: default
+        ownerReferences:
+          - apiVersion: yakup.ibidem.no/v1
+            kind: Application
+            name: test-app
+            uid: ""
+            blockOwnerDeletion: true
+            controller: true
+      automountServiceAccountToken: true
