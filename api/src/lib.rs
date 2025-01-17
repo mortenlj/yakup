@@ -21,6 +21,18 @@ pub mod v1 {
     )]
     #[serde(rename_all = "camelCase")]
     pub struct ApplicationSpec {
+        /// The environment variables to set in the container.
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pub env: Vec<EnvValue>,
+
+        /// Inject environment variables from the listed sources.
+        /// A source can be either a configmap or a secret, it is an error to use both in one list item.
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pub env_from: Vec<EnvFrom>,
+
+        /// The image to run.
         pub image: String,
 
         #[serde(default)]
@@ -30,14 +42,6 @@ pub mod v1 {
         #[serde(default)]
         #[serde(skip_serializing_if = "Option::is_none")]
         pub probes: Option<Probes>,
-
-        #[serde(default)]
-        #[serde(skip_serializing_if = "Vec::is_empty")]
-        pub env: Vec<EnvValue>,
-
-        #[serde(default)]
-        #[serde(skip_serializing_if = "Vec::is_empty")]
-        pub env_from: Vec<EnvFrom>,
 
         /// Compute Resources required by this application.
         /// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
@@ -120,8 +124,13 @@ impl EnvValue {
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct EnvFrom {
+    /// The name of a config map to get environment variables from.
+    /// Keys that are not valid environment variable names will be skipped.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config_map: Option<String>,
+
+    /// The name of a secret to get environment variables from.
+    /// Keys that are not valid environment variable names will be skipped.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub secret: Option<String>,
 }
