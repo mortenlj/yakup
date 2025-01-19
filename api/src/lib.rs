@@ -163,9 +163,25 @@ pub struct EnvFrom {
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
+pub struct Ingress {
+    pub zone: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct Port {
+    /// The kind of port to expose.
     pub kind: PortKind,
+
+    /// Container port to expose.
     pub port: u16,
+
+    /// If this port should be exposed as an ingress.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ingress: Option<Ingress>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
