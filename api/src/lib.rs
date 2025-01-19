@@ -12,6 +12,29 @@ pub mod v1 {
     #[kube(
         group = "yakup.ibidem.no",
         version = "v1",
+        kind = "IngressZone",
+        namespaced,
+        shortname = "zone",
+        doc = "Ingress Zone",
+        printcolumn = r#"{"name":"Host","type":"string","jsonPath":".spec.host"}"#
+    )]
+    #[serde(rename_all = "camelCase")]
+    pub struct IngressZoneSpec {
+        /// The host to use for this zone.
+        /// Can contain a variable in the form `{appname}` which will be replaced with the application name.
+        pub host: String,
+
+        /// IngressClass to use for this zone.
+        /// If not set, the default class will be used.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub ingress_class: Option<String>,
+    }
+
+
+    #[derive(CustomResource, Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+    #[kube(
+        group = "yakup.ibidem.no",
+        version = "v1",
         kind = "Application",
         namespaced,
         status = "ApplicationStatus",
@@ -78,18 +101,21 @@ pub mod v1 {
         //           maxLag: 123
         //  # Communication
         //   ingress:
-        //     routes:
-        //       - host: "myapp.nav.no"
-        //         path: "/asd"
-        //         port: 8080 # container port
-        //         type: http # default
-        //       - host: "grpc.nav.no"
-        //         path: "/service"
-        //         port: 8082
-        //         type: grpc
-        //       - host: "myapp-admin.nav.no"
-        //         path: "/"
-        //         port: 8081
+        //     - zone: internal
+        //       path: "/asd"
+        //       port: 8080 # container port
+        //       type: http # default
+        //     - zone: authenticated
+        //       path: "/asd"
+        //       port: 8080 # container port
+        //       type: http # default
+        //     - zone: public
+        //       path: "/service"
+        //       port: 8082
+        //       type: grpc
+        //     - zone: public
+        //       path: "/"
+        //       port: 8081
         //  metrics:
         //     enabled: true
         //     path: /metrics

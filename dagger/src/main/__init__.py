@@ -155,7 +155,7 @@ class Yakup:
         return (
             proj
             .with_exec(["cargo", "run", "--bin", "crd", "--release", "--target", target])
-            .file("target/crd/application.yaml")
+            .file("target/crd/manifests.yaml")
         )
 
     @function
