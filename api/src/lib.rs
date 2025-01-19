@@ -13,7 +13,6 @@ pub mod v1 {
         group = "yakup.ibidem.no",
         version = "v1",
         kind = "IngressZone",
-        namespaced,
         shortname = "zone",
         doc = "Ingress Zone",
         printcolumn = r#"{"name":"Host","type":"string","jsonPath":".spec.host"}"#
