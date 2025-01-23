@@ -107,7 +107,7 @@ async fn reconcile_apps(obj: Arc<Application>, ctx: Arc<Context>) -> ReconcileRe
     let zones = ctx.ingress_zones.read().await;
 
     info!("reconcile request received");
-    match resource_creator::process(obj, &*zones) {
+    match resource_creator::process(obj, &zones) {
         Err(e) => {
             error!("Error processing resource: {:?}", e);
             return Err(ReconcilerError::ResourceProcessing);

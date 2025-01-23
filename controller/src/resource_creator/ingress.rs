@@ -25,8 +25,7 @@ pub(crate) fn process(
         .ports
         .iter()
         .filter(|port| !port.ingress.is_empty())
-        .map(|port| generate_ingresses(app.clone(), zones, object_meta.clone(), port))
-        .flatten()
+        .flat_map(|port| generate_ingresses(app.clone(), zones, object_meta.clone(), port))
         .collect();
     let operations = ingresses
         .iter()
