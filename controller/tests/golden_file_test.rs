@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use test_generator::test_resources;
 
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
-
+use api::IngressZoneTLS;
 use api::v1::{Application, ApplicationSpec, IngressZone, IngressZoneSpec};
 use controller::models::Operation;
 use controller::resource_creator::process;
@@ -39,6 +39,9 @@ fn test_process(resource: PathBuf) {
                 spec: IngressZoneSpec {
                     host: "{appname}.example.com".to_string(),
                     ingress_class: None,
+                    tls: Some(IngressZoneTLS {
+                        cluster_issuer: Some("letsencrypt-staging".to_string()),
+                    })
                 },
             }),
         ),
@@ -52,6 +55,7 @@ fn test_process(resource: PathBuf) {
                 spec: IngressZoneSpec {
                     host: "{appname}.private.example.com".to_string(),
                     ingress_class: Some("private".to_string()),
+                    tls: None,
                 },
             }),
         ),

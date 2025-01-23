@@ -25,10 +25,15 @@ pub mod v1 {
 
         /// IngressClass to use for this zone.
         /// If not set, the default class will be used.
+        #[serde(default)]
         #[serde(skip_serializing_if = "Option::is_none")]
         pub ingress_class: Option<String>,
-    }
 
+        /// TLS configuration for this zone.
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub tls: Option<IngressZoneTLS>,
+    }
 
     #[derive(CustomResource, Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
     #[kube(
@@ -70,7 +75,6 @@ pub mod v1 {
         #[serde(default)]
         #[serde(skip_serializing_if = "Option::is_none")]
         pub resources: Option<ResourceRequirements>,
-
         //     filesFrom:
         //       - secret:
         //           name: my-other-secret
@@ -103,6 +107,14 @@ pub mod v1 {
         //     path: /metrics
         //     port: 8080
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct IngressZoneTLS {
+    /// The cluster_issuer to use for this zone.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cluster_issuer: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]

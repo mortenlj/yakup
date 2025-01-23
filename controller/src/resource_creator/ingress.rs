@@ -4,10 +4,11 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use api::v1::{Application, IngressZone};
 use api::Port;
-use k8s_openapi::api::networking::v1::{HTTPIngressPath, HTTPIngressRuleValue, Ingress, IngressBackend, IngressRule, IngressServiceBackend, IngressSpec, ServiceBackendPort};
+use k8s_openapi::api::networking::v1::{HTTPIngressPath, HTTPIngressRuleValue, Ingress, IngressBackend, IngressRule, IngressServiceBackend, IngressSpec, IngressTLS, ServiceBackendPort};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use kube::ResourceExt;
 use tracing::instrument;
+use md5::{Md5, Digest};
 
 use crate::models::Operation;
 use crate::resource_creator::to_dynamic_object;
@@ -77,7 +78,9 @@ fn generate_ingress(
     let zone = zones
         .get(&ingress.zone)
         .ok_or_else(|| anyhow!("Ingress zone not found"))?;
+
     let host = zone.spec.host.replace("{appname}", app.name_any().as_str());
+
     let paths = ingress.paths.iter()
         .map(|path| {
             HTTPIngressPath {
@@ -96,18 +99,35 @@ fn generate_ingress(
             }
         })
         .collect();
+
     object_meta.name = Some(format!("{}-{}", app.name_any(), zone.name_any()));
+
+    let tls = match &zone.spec.tls {
+        Some(zone_tls) => {
+            object_meta.annotations = Some(BTreeMap::from([
+                ("cert-manager.io/cluster-issuer".to_string(), zone_tls.cluster_issuer.clone().unwrap_or_default()),
+            ]));
+            let hosts_md5 = Md5::digest(host.clone().as_bytes());
+            let hosts_id = fast32::base32::CROCKFORD_LOWER.encode(&hosts_md5);
+            Some(vec![IngressTLS {
+                hosts: Some(vec![host.clone()]),
+                secret_name: Some(format!("cert-ingress-{}", hosts_id)),
+            }])
+        }
+        None => None,
+    };
+
     let ingress = Ingress {
         metadata: object_meta,
         spec: Some(IngressSpec {
             ingress_class_name: zone.spec.ingress_class.clone(),
             rules: Some(vec![IngressRule {
-                host: Some(host),
+                host: Some(host.clone()),
                 http: Some(HTTPIngressRuleValue {
                     paths,
                 })
             }]),
-            // TODO: TLS
+            tls,
             ..Default::default()
         }),
         ..Default::default()
