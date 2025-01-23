@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
@@ -10,11 +10,11 @@ use kube::discovery::ApiResource;
 use kube::ResourceExt;
 use tracing::instrument;
 
-use api::v1::Application;
-
 use crate::models::Operation;
+use api::v1::{Application, IngressZone};
 
 mod deployment;
+mod ingress;
 mod service;
 mod service_account;
 
@@ -35,8 +35,11 @@ impl Owner for Application {
     }
 }
 
-#[instrument()]
-pub fn process(app: Arc<Application>) -> Result<Vec<Operation>> {
+#[instrument(skip(zones, app), fields(trace_id))]
+pub fn process(
+    app: Arc<Application>,
+    zones: &HashMap<String, Arc<IngressZone>>,
+) -> Result<Vec<Operation>> {
     let app_name = app.name_any();
     let namespace = app.namespace().unwrap_or("default".to_string());
     let labels = BTreeMap::from([
@@ -61,7 +64,17 @@ pub fn process(app: Arc<Application>) -> Result<Vec<Operation>> {
         labels.clone(),
     )?);
     operations.extend(service::process(&app, object_meta.clone(), labels.clone())?);
-    operations.extend(service_account::process(&app, object_meta.clone(), labels.clone())?);
+    operations.extend(service_account::process(
+        &app,
+        object_meta.clone(),
+        labels.clone(),
+    )?);
+    operations.extend(ingress::process(
+        &app,
+        zones,
+        object_meta.clone(),
+        labels.clone(),
+    )?);
     Ok(operations)
 }
 

@@ -21,7 +21,7 @@ struct FromConfig {
     volumes: Option<Vec<Volume>>,
 }
 
-#[instrument()]
+#[instrument(skip(app, object_meta), fields(trace_id))]
 pub(crate) fn process(
     app: &Arc<Application>,
     object_meta: ObjectMeta,

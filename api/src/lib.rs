@@ -98,23 +98,6 @@ pub mod v1 {
         //         - topic: mytopic
         //           group: losGroupos
         //           maxLag: 123
-        //  # Communication
-        //   ingress:
-        //     - zone: internal
-        //       path: "/asd"
-        //       port: 8080 # container port
-        //       type: http # default
-        //     - zone: authenticated
-        //       path: "/asd"
-        //       port: 8080 # container port
-        //       type: http # default
-        //     - zone: public
-        //       path: "/service"
-        //       port: 8082
-        //       type: grpc
-        //     - zone: public
-        //       path: "/"
-        //       port: 8081
         //  metrics:
         //     enabled: true
         //     path: /metrics
@@ -161,12 +144,38 @@ pub struct EnvFrom {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+pub enum PathType {
+    #[default]
+    Prefix,
+    Exact,
+}
+
+impl Display for PathType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Ingress {
     pub zone: String,
 
+    #[serde(default = "default_path_type")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub path: Option<String>,
+    pub path_type: Option<PathType>,
+
+    #[serde(default = "default_paths")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub paths: Vec<String>,
+}
+
+fn default_paths() -> Vec<String> {
+    vec!["/".to_string()]
+}
+
+fn default_path_type() -> Option<PathType> {
+    Some(PathType::Prefix)
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
@@ -179,8 +188,10 @@ pub struct Port {
     pub port: u16,
 
     /// If this port should be exposed as an ingress.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ingress: Option<Ingress>,
+    /// `ingress` is only valid on ports of kind PortKind::HTTP.
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub ingress: Vec<Ingress>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]

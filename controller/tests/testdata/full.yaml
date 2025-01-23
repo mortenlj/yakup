@@ -19,8 +19,15 @@ app_spec:
   ports:
     - kind: http
       port: 8080
+      ingress:
+        - zone: public
+        - zone: private
+          pathType: Exact
+          paths:
+            - /api/v1/sessions
+            - /api/v1/sessions.ics
     - kind: metrics
-      port: 9090
+      port: 9091
     - kind: tcp
       port: 1234
   env:
@@ -34,8 +41,8 @@ app_spec:
       memory: 128Mi
       cpu: 500m
     requests:
-        memory: 64Mi
-        cpu: 250m
+      memory: 64Mi
+      cpu: 250m
 
 operations:
   - operation: CreateOrUpdate
@@ -84,7 +91,7 @@ operations:
                   failureThreshold: 3
                   grpc:
                     service: readiness
-                    port: 9090
+                    port: 9091
                   initialDelaySeconds: 200
                   periodSeconds: 10
                   successThreshold: 1
@@ -100,7 +107,7 @@ operations:
                   - name: http
                     containerPort: 8080
                   - name: metrics
-                    containerPort: 9090
+                    containerPort: 9091
                   - name: tcp
                     containerPort: 1234
                 env:
@@ -215,3 +222,70 @@ operations:
             blockOwnerDeletion: true
             controller: true
       automountServiceAccountToken: true
+  - operation: CreateOrUpdate
+    object:
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        labels:
+          app.kubernetes.io/managed-by: yakup
+          app.kubernetes.io/name: test-app
+        name: test-app-public
+        namespace: default
+        ownerReferences:
+          - apiVersion: yakup.ibidem.no/v1
+            kind: Application
+            name: test-app
+            uid: ""
+            blockOwnerDeletion: true
+            controller: true
+      spec:
+        rules:
+          - host: test-app.example.com
+            http:
+              paths:
+                - backend:
+                    service:
+                      name: test-app
+                      port:
+                        name: http
+                  path: /
+                  pathType: Prefix
+  - operation: CreateOrUpdate
+    object:
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        labels:
+          app.kubernetes.io/managed-by: yakup
+          app.kubernetes.io/name: test-app
+        name: test-app-private
+        namespace: default
+        ownerReferences:
+          - apiVersion: yakup.ibidem.no/v1
+            kind: Application
+            name: test-app
+            uid: ""
+            blockOwnerDeletion: true
+            controller: true
+      spec:
+        ingressClassName: private
+        rules:
+          - host: test-app.private.example.com
+            http:
+              paths:
+                - backend:
+                    service:
+                      name: test-app
+                      port:
+                        name: http
+                  path: /api/v1/sessions
+                  pathType: Exact
+                - backend:
+                    service:
+                      name: test-app
+                      port:
+                        name: http
+                  path: /api/v1/sessions.ics
+                  pathType: Exact
+

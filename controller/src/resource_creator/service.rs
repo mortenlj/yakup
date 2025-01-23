@@ -12,7 +12,7 @@ use api::v1::Application;
 use crate::models::Operation;
 use crate::resource_creator::to_dynamic_object;
 
-#[instrument()]
+#[instrument(skip(app, object_meta), fields(trace_id))]
 pub(crate) fn process(
     app: &Arc<Application>,
     object_meta: ObjectMeta,

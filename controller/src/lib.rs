@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -12,13 +13,14 @@ use opentelemetry::KeyValue;
 use opentelemetry_sdk::trace::Tracer;
 use opentelemetry_sdk::Resource;
 use opentelemetry_semantic_conventions::resource;
+use tokio::sync::RwLock;
 use tracing::level_filters::LevelFilter;
 use tracing::{error, field, info, instrument, Span};
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{EnvFilter, Registry};
 
-use api::v1::Application;
+use api::v1::{Application, IngressZone};
 
 pub mod models;
 pub mod resource_creator;
@@ -35,8 +37,9 @@ enum ReconcilerError {
 
 type ReconcileResult<T, E = ReconcilerError> = std::result::Result<T, E>;
 
-struct Context {
+pub struct Context {
     pub client: Client,
+    pub ingress_zones: RwLock<HashMap<String, Arc<IngressZone>>>,
 }
 
 pub async fn run() -> Result<()> {
@@ -67,10 +70,20 @@ pub async fn run() -> Result<()> {
         .map_err(|e| anyhow!(e).context("initializing Kubernetes client"))?;
     let apps = Api::<Application>::all(client.clone());
     let deployments = Api::<Deployment>::all(client.clone());
+    let ingress_zones = Api::<IngressZone>::all(client.clone());
 
+    let ctx = Arc::new(Context {
+        client,
+        ingress_zones: RwLock::new(HashMap::new()),
+    });
     Controller::new(apps.clone(), Default::default())
         .owns(deployments.clone(), Default::default())
-        .run(reconcile, error_policy, Arc::new(Context { client }))
+        .run(reconcile_apps, error_policy_apps, ctx.clone())
+        .for_each(|_| futures::future::ready(()))
+        .await;
+
+    Controller::new(ingress_zones.clone(), Default::default())
+        .run(reconcile_zones, error_policy_zones, ctx.clone())
         .for_each(|_| futures::future::ready(()))
         .await;
 
@@ -78,12 +91,23 @@ pub async fn run() -> Result<()> {
 }
 
 #[instrument(skip(ctx, obj), fields(trace_id))]
-async fn reconcile(obj: Arc<Application>, ctx: Arc<Context>) -> ReconcileResult<Action> {
+async fn reconcile_zones(obj: Arc<IngressZone>, ctx: Arc<Context>) -> ReconcileResult<Action> {
+    let trace_id = get_trace_id();
+    Span::current().record("trace_id", field::display(&trace_id));
+    let mut zones = ctx.ingress_zones.write().await;
+    zones.insert(obj.metadata.name.as_ref().unwrap().clone(), obj.clone());
+    Ok(Action::requeue(Duration::from_secs(3600)))
+}
+
+#[instrument(skip(ctx, obj), fields(trace_id))]
+async fn reconcile_apps(obj: Arc<Application>, ctx: Arc<Context>) -> ReconcileResult<Action> {
     let trace_id = get_trace_id();
     Span::current().record("trace_id", field::display(&trace_id));
 
+    let zones = ctx.ingress_zones.read().await;
+
     info!("reconcile request received");
-    match resource_creator::process(obj) {
+    match resource_creator::process(obj, &*zones) {
         Err(e) => {
             error!("Error processing resource: {:?}", e);
             return Err(ReconcilerError::ResourceProcessing);
@@ -114,7 +138,20 @@ async fn reconcile(obj: Arc<Application>, ctx: Arc<Context>) -> ReconcileResult<
     Ok(Action::requeue(Duration::from_secs(3600)))
 }
 
-fn error_policy(_object: Arc<Application>, err: &ReconcilerError, _ctx: Arc<Context>) -> Action {
+fn error_policy_apps(
+    _object: Arc<Application>,
+    err: &ReconcilerError,
+    _ctx: Arc<Context>,
+) -> Action {
+    error!("Error occurred during reconciliation: {:?}", err);
+    Action::requeue(Duration::from_secs(5))
+}
+
+fn error_policy_zones(
+    _object: Arc<IngressZone>,
+    err: &ReconcilerError,
+    _ctx: Arc<Context>,
+) -> Action {
     error!("Error occurred during reconciliation: {:?}", err);
     Action::requeue(Duration::from_secs(5))
 }
