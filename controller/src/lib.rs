@@ -69,7 +69,7 @@ pub async fn run() -> Result<()> {
         .await
         .map_err(|e| anyhow!(e).context("initializing Kubernetes client"))?;
     let apps = Api::<Application>::all(client.clone());
-    let deployments = Api::<Deployment>::all(client.clone());
+    let _deployments = Api::<Deployment>::all(client.clone());
     let ingress_zones = Api::<IngressZone>::all(client.clone());
 
     let ctx = Arc::new(Context {
