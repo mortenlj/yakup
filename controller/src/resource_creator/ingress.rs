@@ -31,12 +31,11 @@ pub(crate) fn process(
         .iter()
         .filter(|port| !port.ingress.is_empty())
         .flat_map(|port| generate_ingresses(app.clone(), zones, object_meta.clone(), port))
-        .map(|ingress| {
+        .inspect(|ingress| {
             let ingress_labels = ingress.metadata.labels.clone().unwrap_or_default();
             if let Some(zone_name) = ingress_labels.get("yakup.ibidem.no/ingress_zone") {
                 possible_ingresses.remove(&zone_name.clone());
             }
-            ingress
         })
         .collect();
 
