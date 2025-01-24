@@ -77,7 +77,7 @@ pub async fn run() -> Result<()> {
         ingress_zones: RwLock::new(HashMap::new()),
     });
     Controller::new(apps.clone(), Default::default())
-        .owns(deployments.clone(), Default::default())
+        //.owns(deployments.clone(), Default::default())
         .run(reconcile_apps, error_policy_apps, ctx.clone())
         .for_each(|_| futures::future::ready(()))
         .await;
