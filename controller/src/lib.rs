@@ -96,7 +96,9 @@ async fn reconcile_zones(obj: Arc<IngressZone>, ctx: Arc<Context>) -> ReconcileR
     let trace_id = get_trace_id();
     Span::current().record("trace_id", field::display(&trace_id));
     let mut zones = ctx.ingress_zones.write().await;
-    zones.insert(obj.metadata.name.as_ref().unwrap().clone(), obj.clone());
+    let zone_name = obj.metadata.name.as_ref().unwrap().clone();
+    info!("reconcile request received for zone {}", zone_name);
+    zones.insert(zone_name, obj.clone());
     Ok(Action::requeue(Duration::from_secs(3600)))
 }
 
