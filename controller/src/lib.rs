@@ -1,3 +1,4 @@
+use futures::join;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -15,7 +16,7 @@ use opentelemetry_sdk::Resource;
 use opentelemetry_semantic_conventions::resource;
 use tokio::sync::RwLock;
 use tracing::level_filters::LevelFilter;
-use tracing::{error, field, info, instrument, Span};
+use tracing::{error, field, info, instrument, warn, Span};
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{EnvFilter, Registry};
@@ -76,16 +77,16 @@ pub async fn run() -> Result<()> {
         client,
         ingress_zones: RwLock::new(HashMap::new()),
     });
-    Controller::new(apps.clone(), Default::default())
+
+    let app_controller = Controller::new(apps.clone(), Default::default())
         //.owns(deployments.clone(), Default::default())
         .run(reconcile_apps, error_policy_apps, ctx.clone())
-        .for_each(|_| futures::future::ready(()))
-        .await;
-
-    Controller::new(ingress_zones.clone(), Default::default())
+        .for_each(|_| futures::future::ready(()));
+    let zone_controller = Controller::new(ingress_zones.clone(), Default::default())
         .run(reconcile_zones, error_policy_zones, ctx.clone())
-        .for_each(|_| futures::future::ready(()))
-        .await;
+        .for_each(|_| futures::future::ready(()));
+
+    join!(app_controller, zone_controller);
 
     Ok(())
 }
@@ -143,7 +144,7 @@ fn error_policy_apps(
     err: &ReconcilerError,
     _ctx: Arc<Context>,
 ) -> Action {
-    error!("Error occurred during reconciliation: {:?}", err);
+    warn!("Error occurred during reconciliation: {:?}", err);
     Action::requeue(Duration::from_secs(5))
 }
 
@@ -152,7 +153,7 @@ fn error_policy_zones(
     err: &ReconcilerError,
     _ctx: Arc<Context>,
 ) -> Action {
-    error!("Error occurred during reconciliation: {:?}", err);
+    warn!("Error occurred during reconciliation: {:?}", err);
     Action::requeue(Duration::from_secs(5))
 }
 
