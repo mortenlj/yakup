@@ -65,15 +65,12 @@ pub fn process(
     )?);
     operations.extend(service::process(&app, object_meta.clone(), labels.clone())?);
     operations.extend(service_account::process(
-        &app,
         object_meta.clone(),
-        labels.clone(),
     )?);
     operations.extend(ingress::process(
         &app,
         zones,
         object_meta.clone(),
-        labels.clone(),
     )?);
     Ok(operations)
 }

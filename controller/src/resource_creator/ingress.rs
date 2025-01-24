@@ -18,7 +18,6 @@ pub(crate) fn process(
     app: &Arc<Application>,
     zones: &HashMap<String, Arc<IngressZone>>,
     object_meta: ObjectMeta,
-    labels: BTreeMap<String, String>,
 ) -> Result<Vec<Operation>> {
     let ingresses: Vec<Ingress> = app
         .spec
@@ -27,6 +26,7 @@ pub(crate) fn process(
         .filter(|port| !port.ingress.is_empty())
         .flat_map(|port| generate_ingresses(app.clone(), zones, object_meta.clone(), port))
         .collect();
+
     let operations = ingresses
         .iter()
         .map(|ingress| -> Result<Operation> {
