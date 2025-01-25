@@ -7,7 +7,7 @@ use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 use tracing::instrument;
 
-use api::v1::Application;
+use api::application::v1::Application;
 
 use crate::models::Operation;
 use crate::resource_creator::to_dynamic_object;
@@ -49,9 +49,9 @@ fn generate_ports(app: &Arc<Application>) -> Option<Vec<ServicePort>> {
         .iter()
         .map(|port| {
             let port_num: i32 = match port.kind {
-                api::PortKind::HTTP => 80,
-                api::PortKind::Metrics => 9090,
-                api::PortKind::TCP => port.port as i32,
+                api::application::PortKind::HTTP => 80,
+                api::application::PortKind::Metrics => 9090,
+                api::application::PortKind::TCP => port.port as i32,
             };
             ServicePort {
                 name: Some(port.name()),

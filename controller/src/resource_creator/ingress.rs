@@ -2,8 +2,9 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
-use api::v1::{Application, IngressZone};
-use api::Port;
+use api::application::v1::Application;
+use api::application::Port;
+use api::ingress_zone::v1::IngressZone;
 use k8s_openapi::api::networking::v1::{
     HTTPIngressPath, HTTPIngressRuleValue, Ingress, IngressBackend, IngressRule,
     IngressServiceBackend, IngressSpec, IngressTLS, ServiceBackendPort,
@@ -98,7 +99,7 @@ fn generate_ingress(
     app: Arc<Application>,
     zones: &HashMap<String, Arc<IngressZone>>,
     mut object_meta: ObjectMeta,
-    ingress: &api::Ingress,
+    ingress: &api::application::Ingress,
 ) -> Result<Ingress> {
     let zone = zones
         .get(&ingress.zone)

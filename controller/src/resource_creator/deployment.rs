@@ -8,10 +8,9 @@ use kube::ResourceExt;
 use tracing::instrument;
 
 use anyhow::Result;
-use api::v1::Application;
-use api::{Probe, Probes};
+use api::application::v1::Application;
 use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
-
+use api::application::{Probe, Probes};
 use crate::models::Operation;
 use crate::resource_creator::to_dynamic_object;
 

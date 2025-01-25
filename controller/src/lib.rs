@@ -21,7 +21,8 @@ use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::{EnvFilter, Registry};
 
-use api::v1::{Application, IngressZone};
+use api::application::v1::Application;
+use api::ingress_zone::v1::IngressZone;
 
 pub mod models;
 pub mod resource_creator;
@@ -46,8 +47,7 @@ pub struct Context {
 pub async fn run() -> Result<()> {
     let logger = tracing_subscriber::fmt::layer().compact();
     let env_filter = EnvFilter::try_from_default_env()
-        .or_else(|_| EnvFilter::try_new("info"))
-        .unwrap();
+        .or_else(|_| EnvFilter::try_new("info"))?;
     match init_tracer().await {
         Ok(telemetry) => {
             let max_level_hint = env_filter.max_level_hint().unwrap_or(LevelFilter::OFF);
@@ -79,7 +79,6 @@ pub async fn run() -> Result<()> {
     });
 
     let app_controller = Controller::new(apps.clone(), Default::default())
-        //.owns(deployments.clone(), Default::default())
         .run(reconcile_apps, error_policy_apps, ctx.clone())
         .for_each(|_| futures::future::ready(()));
     let zone_controller = Controller::new(ingress_zones.clone(), Default::default())

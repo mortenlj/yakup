@@ -11,7 +11,8 @@ use kube::ResourceExt;
 use tracing::instrument;
 
 use crate::models::Operation;
-use api::v1::{Application, IngressZone};
+use api::application::v1::Application;
+use api::ingress_zone::v1::IngressZone;
 
 mod deployment;
 mod ingress;
@@ -64,14 +65,8 @@ pub fn process(
         labels.clone(),
     )?);
     operations.extend(service::process(&app, object_meta.clone(), labels.clone())?);
-    operations.extend(service_account::process(
-        object_meta.clone(),
-    )?);
-    operations.extend(ingress::process(
-        &app,
-        zones,
-        object_meta.clone(),
-    )?);
+    operations.extend(service_account::process(object_meta.clone())?);
+    operations.extend(ingress::process(&app, zones, object_meta.clone())?);
     Ok(operations)
 }
 

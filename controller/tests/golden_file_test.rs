@@ -8,11 +8,12 @@ use assert_json_diff::assert_json_include;
 use serde::{Deserialize, Serialize};
 use test_generator::test_resources;
 
-use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
-use api::IngressZoneTLS;
-use api::v1::{Application, ApplicationSpec, IngressZone, IngressZoneSpec};
+use api::application::v1::{Application, ApplicationSpec};
+use api::ingress_zone::v1::{IngressZone, IngressZoneSpec};
+use api::ingress_zone::IngressZoneTLS;
 use controller::models::Operation;
 use controller::resource_creator::process;
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::ObjectMeta;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct TestCase {
@@ -41,7 +42,7 @@ fn test_process(resource: PathBuf) {
                     ingress_class: None,
                     tls: Some(IngressZoneTLS {
                         cluster_issuer: Some("letsencrypt-staging".to_string()),
-                    })
+                    }),
                 },
             }),
         ),
@@ -65,9 +66,15 @@ fn test_process(resource: PathBuf) {
     let operations = process(Arc::new(app), &zones).unwrap();
 
     for (operation, expected_operation) in operations.iter().zip(case.operations.iter()) {
-        println!("Actual: {}", serde_json::to_string_pretty(operation).unwrap());
+        println!(
+            "Actual: {}",
+            serde_json::to_string_pretty(operation).unwrap()
+        );
         let actual = serde_json::to_value(operation).expect("Could not serialize operation.");
-        println!("Expected: {}", serde_json::to_string_pretty(expected_operation).unwrap());
+        println!(
+            "Expected: {}",
+            serde_json::to_string_pretty(expected_operation).unwrap()
+        );
         let expected = serde_json::to_value(expected_operation)
             .expect("Could not serialize expected operation.");
         assert_json_include!(actual: actual, expected: expected);
