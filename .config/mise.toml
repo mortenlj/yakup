@@ -1,0 +1,27 @@
+[tasks.dtest]
+run = "dagger call test"
+description = "Run tests and linters in dagger"
+
+[tasks.test]
+run = "cargo nextest run"
+description = "Run tests"
+
+[tasks.lint]
+run = "cargo clippy"
+description = "Run linters"
+
+[tasks.build]
+run = "cargo build"
+description = "Build the project"
+
+[tasks.dbuild]
+run = "dagger call build"
+description = "Build the project in dagger"
+
+[tasks.publish]
+run = "dagger call publish"
+description = "Publish the project to ttl.sh"
+
+[tasks.push]
+run = "git push"
+depends = ["dtest", "publish"]
