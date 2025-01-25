@@ -216,16 +216,24 @@ fn generate_env_from(app_name: &str) -> Vec<EnvFromSource> {
 }
 
 fn generate_ports(app: &Arc<Application>) -> Option<Vec<ContainerPort>> {
-    let container_ports = app
-        .spec
-        .ports
-        .iter()
-        .map(|port| ContainerPort {
-            name: Some(port.name()),
-            container_port: port.port as i32,
-            ..Default::default()
-        })
-        .collect::<Vec<_>>();
+    let mut container_ports = Vec::new();
+    if let Some(ports) = &app.spec.ports {
+        if let Some(http_port) = &ports.http {
+            container_ports.push(ContainerPort {
+                name: Some("http".to_string()),
+                container_port: http_port.port as i32,
+                ..Default::default()
+            });
+        }
+
+        if let Some(tcp_port) = &ports.tcp {
+            container_ports.push(ContainerPort {
+                name: Some("tcp".to_string()),
+                container_port: tcp_port.port as i32,
+                ..Default::default()
+            });
+        }
+    }
     if container_ports.is_empty() {
         None
     } else {

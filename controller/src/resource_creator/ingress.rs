@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use api::application::v1::Application;
-use api::application::Port;
+use api::application::HttpPort;
 use api::ingress_zone::v1::IngressZone;
 use k8s_openapi::api::networking::v1::{
     HTTPIngressPath, HTTPIngressRuleValue, Ingress, IngressBackend, IngressRule,
@@ -26,19 +26,21 @@ pub(crate) fn process(
     let mut possible_ingresses: HashSet<String> =
         HashSet::from_iter(zones.keys().map(|k| format!("{}-{}", app.name_any(), k)));
 
-    let ingresses: Vec<Ingress> = app
-        .spec
-        .ports
-        .iter()
-        .filter(|port| !port.ingress.is_empty())
-        .flat_map(|port| generate_ingresses(app.clone(), zones, object_meta.clone(), port))
-        .inspect(|ingress| {
-            let ingress_labels = ingress.metadata.labels.clone().unwrap_or_default();
-            if let Some(zone_name) = ingress_labels.get("yakup.ibidem.no/ingress_zone") {
-                possible_ingresses.remove(&zone_name.clone());
-            }
-        })
-        .collect();
+    let mut ingresses: Vec<Ingress> = Vec::new();
+    if let Some(ports) = &app.spec.ports {
+        if let Some(http_port) = &ports.http {
+            ingresses.extend(generate_ingresses(
+                app.clone(),
+                zones,
+                object_meta.clone(),
+                http_port,
+            ));
+        }
+    }
+    // TODO: Test this
+    for ingress in &ingresses {
+        possible_ingresses.remove(&ingress.metadata.name.clone().unwrap());
+    }
 
     let mut operations: Vec<Operation> = ingresses
         .iter()
@@ -78,7 +80,7 @@ fn generate_ingresses(
     app: Arc<Application>,
     zones: &HashMap<String, Arc<IngressZone>>,
     object_meta: ObjectMeta,
-    port: &Port,
+    port: &HttpPort,
 ) -> Vec<Ingress> {
     let ingresses = port
         .ingress

@@ -36,8 +36,8 @@ pub mod v1 {
         pub image: String,
 
         #[serde(default)]
-        #[serde(skip_serializing_if = "Vec::is_empty")]
-        pub ports: Vec<Port>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub ports: Option<Ports>,
 
         #[serde(default)]
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -157,10 +157,19 @@ fn default_path_type() -> Option<PathType> {
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct Port {
-    /// The kind of port to expose.
-    pub kind: PortKind,
+pub struct Ports {
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub http: Option<HttpPort>,
 
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tcp: Option<TcpPort>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct HttpPort {
     /// Container port to expose.
     pub port: u16,
 
@@ -172,23 +181,10 @@ pub struct Port {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-pub enum PortKind {
-    #[default]
-    HTTP,
-    TCP,
-}
-
-impl Port {
-    pub fn name(&self) -> String {
-        self.kind.to_string().to_lowercase()
-    }
-}
-
-impl Display for PortKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
+#[serde(rename_all = "camelCase")]
+pub struct TcpPort {
+    /// Container port to expose.
+    pub port: u16,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]

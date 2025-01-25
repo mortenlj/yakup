@@ -17,7 +17,7 @@ app_spec:
       tcp:
         portName: tcp
   ports:
-    - kind: http
+    http:
       port: 8080
       ingress:
         - zone: public
@@ -26,7 +26,7 @@ app_spec:
           paths:
             - /api/v1/sessions
             - /api/v1/sessions.ics
-    - kind: tcp
+    tcp:
       port: 1234
   env:
     - name: ENV_NAME

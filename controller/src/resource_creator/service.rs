@@ -18,7 +18,7 @@ pub(crate) fn process(
     object_meta: ObjectMeta,
     labels: BTreeMap<String, String>,
 ) -> Result<Vec<Operation>> {
-    let ports = generate_ports(app);
+    let ports = generate_ports(app.clone());
     if ports.is_none() || ports.as_ref().unwrap().is_empty() {
         return Ok(vec![Operation::DeleteIfExists(Arc::new(
             to_dynamic_object(Service {
@@ -42,24 +42,27 @@ pub(crate) fn process(
     ))])
 }
 
-fn generate_ports(app: &Arc<Application>) -> Option<Vec<ServicePort>> {
-    let service_ports = app
-        .spec
-        .ports
-        .iter()
-        .map(|port| {
-            let port_num: i32 = match port.kind {
-                api::application::PortKind::HTTP => 80,
-                api::application::PortKind::TCP => port.port as i32,
-            };
-            ServicePort {
-                name: Some(port.name()),
-                port: port_num,
-                target_port: Some(IntOrString::String(port.name())),
+fn generate_ports(app: Arc<Application>) -> Option<Vec<ServicePort>> {
+    let mut service_ports = Vec::new();
+    if let Some(ports) = &app.spec.ports {
+        if let Some(_http_port) = &ports.http {
+            service_ports.push(ServicePort {
+                name: Some("http".to_string()),
+                port: 80,
+                target_port: Some(IntOrString::String("http".to_string())),
                 ..Default::default()
-            }
-        })
-        .collect::<Vec<_>>();
+            });
+        }
+
+        if let Some(tcp_port) = &ports.tcp {
+            service_ports.push(ServicePort {
+                name: Some("tcp".to_string()),
+                port: tcp_port.port as i32,
+                target_port: Some(IntOrString::String("tcp".to_string())),
+                ..Default::default()
+            });
+        }
+    }
     if service_ports.is_empty() {
         None
     } else {
