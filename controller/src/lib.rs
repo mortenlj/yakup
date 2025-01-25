@@ -5,7 +5,6 @@ use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use futures::StreamExt;
-use k8s_openapi::api::apps::v1::Deployment;
 use kube::runtime::controller::Action;
 use kube::runtime::controller::Controller;
 use kube::{Api, Client};
@@ -46,8 +45,7 @@ pub struct Context {
 
 pub async fn run() -> Result<()> {
     let logger = tracing_subscriber::fmt::layer().compact();
-    let env_filter = EnvFilter::try_from_default_env()
-        .or_else(|_| EnvFilter::try_new("info"))?;
+    let env_filter = EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("info"))?;
     match init_tracer().await {
         Ok(telemetry) => {
             let max_level_hint = env_filter.max_level_hint().unwrap_or(LevelFilter::OFF);
@@ -69,8 +67,8 @@ pub async fn run() -> Result<()> {
     let client = Client::try_default()
         .await
         .map_err(|e| anyhow!(e).context("initializing Kubernetes client"))?;
+    info!("Kubernetes client initialized");
     let apps = Api::<Application>::all(client.clone());
-    let _deployments = Api::<Deployment>::all(client.clone());
     let ingress_zones = Api::<IngressZone>::all(client.clone());
 
     let ctx = Arc::new(Context {
@@ -79,13 +77,18 @@ pub async fn run() -> Result<()> {
     });
 
     let app_controller = Controller::new(apps.clone(), Default::default())
-        .run(reconcile_apps, error_policy_apps, ctx.clone())
+        .run(reconcile_apps, error_policy, ctx.clone())
         .for_each(|_| futures::future::ready(()));
+    info!("Application controller created");
     let zone_controller = Controller::new(ingress_zones.clone(), Default::default())
-        .run(reconcile_zones, error_policy_zones, ctx.clone())
+        .run(reconcile_zones, error_policy, ctx.clone())
         .for_each(|_| futures::future::ready(()));
+    info!("Zone controller created");
 
+    info!("Starting controllers");
     join!(app_controller, zone_controller);
+
+    warn!("Controller terminated unexpectedly");
 
     Ok(())
 }
@@ -140,20 +143,7 @@ async fn reconcile_apps(obj: Arc<Application>, ctx: Arc<Context>) -> ReconcileRe
     Ok(Action::requeue(Duration::from_secs(3600)))
 }
 
-fn error_policy_apps(
-    _object: Arc<Application>,
-    err: &ReconcilerError,
-    _ctx: Arc<Context>,
-) -> Action {
-    warn!("Error occurred during reconciliation: {:?}", err);
-    Action::requeue(Duration::from_secs(5))
-}
-
-fn error_policy_zones(
-    _object: Arc<IngressZone>,
-    err: &ReconcilerError,
-    _ctx: Arc<Context>,
-) -> Action {
+fn error_policy<T>(_object: Arc<T>, err: &ReconcilerError, _ctx: Arc<Context>) -> Action {
     warn!("Error occurred during reconciliation: {:?}", err);
     Action::requeue(Duration::from_secs(5))
 }
