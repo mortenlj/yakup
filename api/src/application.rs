@@ -176,7 +176,6 @@ pub struct Port {
 pub enum PortKind {
     #[default]
     HTTP,
-    Metrics,
     TCP,
 }
 
@@ -219,9 +218,6 @@ pub struct Probe {
     pub http: Option<HttpAction>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub grpc: Option<GrpcAction>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub tcp: Option<TcpAction>,
 }
 
@@ -248,30 +244,6 @@ impl Default for HttpAction {
     fn default() -> Self {
         HttpAction {
             path: default_http_path(),
-            config: Default::default(),
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct GrpcAction {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default = "default_grpc_service")]
-    pub service: Option<String>,
-
-    #[serde(flatten)]
-    pub config: ProbeConfig,
-}
-
-fn default_grpc_service() -> Option<String> {
-    None
-}
-
-impl Default for GrpcAction {
-    fn default() -> Self {
-        GrpcAction {
-            service: default_grpc_service(),
             config: Default::default(),
         }
     }

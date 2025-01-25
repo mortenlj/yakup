@@ -2,17 +2,21 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use k8s_openapi::api::apps::v1::{Deployment, DeploymentSpec};
-use k8s_openapi::api::core::v1::{ConfigMapEnvSource, ConfigMapVolumeSource, Container, ContainerPort, EnvFromSource, GRPCAction, HTTPGetAction, PodSpec, PodTemplateSpec, SecretEnvSource, SecretVolumeSource, TCPSocketAction, Volume, VolumeMount};
+use k8s_openapi::api::core::v1::{
+    ConfigMapEnvSource, ConfigMapVolumeSource, Container, ContainerPort, EnvFromSource,
+    HTTPGetAction, PodSpec, PodTemplateSpec, SecretEnvSource, SecretVolumeSource, TCPSocketAction,
+    Volume, VolumeMount,
+};
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta};
 use kube::ResourceExt;
 use tracing::instrument;
 
-use anyhow::Result;
-use api::application::v1::Application;
-use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
-use api::application::{Probe, Probes};
 use crate::models::Operation;
 use crate::resource_creator::to_dynamic_object;
+use anyhow::Result;
+use api::application::v1::Application;
+use api::application::{Probe, Probes};
+use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 
 struct FromConfig {
     env_from: Option<Vec<EnvFromSource>>,
@@ -49,9 +53,15 @@ pub(crate) fn process(
                         env: Some(app.spec.env.iter().map(|e| e.to_kube()).collect()),
                         env_from: from_config.env_from,
                         volume_mounts: from_config.volume_mounts,
-                        liveness_probe: generate_probe(app, |probes: &Probes| probes.liveness.clone()),
-                        readiness_probe: generate_probe(app, |probes: &Probes| probes.readiness.clone()),
-                        startup_probe: generate_probe(app, |probes: &Probes| probes.startup.clone()),
+                        liveness_probe: generate_probe(app, |probes: &Probes| {
+                            probes.liveness.clone()
+                        }),
+                        readiness_probe: generate_probe(app, |probes: &Probes| {
+                            probes.readiness.clone()
+                        }),
+                        startup_probe: generate_probe(app, |probes: &Probes| {
+                            probes.startup.clone()
+                        }),
                         resources: app.spec.resources.clone(),
                         ..Default::default()
                     }],
@@ -92,7 +102,7 @@ fn generate_from_config(app: &Arc<Application>) -> FromConfig {
     FromConfig {
         env_from: Some(env_from),
         volume_mounts: Some(volume_mounts),
-        volumes: Some(volumes)
+        volumes: Some(volumes),
     }
 }
 
@@ -113,20 +123,6 @@ fn generate_probe(
                     scheme: None,
                 }
             });
-            let mut grpc_delay = None;
-            let grpc = &probe.grpc.map(|grpc| {
-                grpc_delay = Some(grpc.config.initial_delay_seconds as i32);
-                let grpc_port = &app
-                    .spec
-                    .ports
-                    .iter()
-                    .find(|port| port.name() == grpc.config.port_name)
-                    .map_or(1234, |port| port.port);
-                GRPCAction {
-                    port: grpc_port.to_owned() as i32,
-                    service: grpc.service,
-                }
-            });
             let mut tcp_delay = None;
             let tcp_socket = &probe.tcp.map(|tcp| {
                 tcp_delay = Some(tcp.config.initial_delay_seconds as i32);
@@ -137,9 +133,8 @@ fn generate_probe(
             });
             k8s_openapi::api::core::v1::Probe {
                 http_get: http_get.to_owned(),
-                grpc: grpc.to_owned(),
                 tcp_socket: tcp_socket.to_owned(),
-                initial_delay_seconds: http_delay.or(grpc_delay).or(tcp_delay),
+                initial_delay_seconds: http_delay.or(tcp_delay),
                 period_seconds: Some(10),
                 timeout_seconds: Some(1),
                 success_threshold: Some(1),

@@ -50,7 +50,6 @@ fn generate_ports(app: &Arc<Application>) -> Option<Vec<ServicePort>> {
         .map(|port| {
             let port_num: i32 = match port.kind {
                 api::application::PortKind::HTTP => 80,
-                api::application::PortKind::Metrics => 9090,
                 api::application::PortKind::TCP => port.port as i32,
             };
             ServicePort {
