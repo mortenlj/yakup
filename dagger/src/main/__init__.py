@@ -12,7 +12,7 @@ from dagger import dag, function, object_type, DefaultPath, Ignore
 PROD_IMAGE = "cgr.dev/chainguard/static:latest"
 DEVELOP_IMAGE = "ttl.sh/mortenlj-yakup"
 
-DEVELOP_VERSION = f"{datetime.now().strftime("%Y%m%d%H%M%S")}-develop"
+DEVELOP_VERSION = f"1h"
 
 PLATFORM_TARGET = {
     dagger.Platform("linux/amd64"): "x86_64-unknown-linux-musl",  # a.k.a. x86_64
