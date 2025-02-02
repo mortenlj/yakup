@@ -8,8 +8,9 @@ use futures::StreamExt;
 use kube::runtime::controller::Action;
 use kube::runtime::controller::Controller;
 use kube::{Api, Client};
-use opentelemetry::trace::TraceId;
+use opentelemetry::trace::{TraceId, TracerProvider};
 use opentelemetry::KeyValue;
+use opentelemetry_otlp::SpanExporter;
 use opentelemetry_sdk::trace::Tracer;
 use opentelemetry_sdk::Resource;
 use opentelemetry_semantic_conventions::resource;
@@ -149,17 +150,15 @@ fn error_policy<T>(_object: Arc<T>, err: &ReconcilerError, _ctx: Arc<Context>) -
 }
 
 async fn init_tracer() -> Result<OpenTelemetryLayer<Registry, Tracer>> {
-    let otel_tracer = opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_exporter(opentelemetry_otlp::new_exporter().tonic())
-        .with_trace_config(
-            opentelemetry_sdk::trace::config().with_resource(Resource::new(vec![
-                KeyValue::new(resource::K8S_DEPLOYMENT_NAME, "yakup"),
-                KeyValue::new(resource::SERVICE_NAME, "yakup"),
-            ])),
-        )
-        .install_batch(opentelemetry_sdk::runtime::Tokio)
-        .map_err(|e| anyhow!(e).context("installing opentelemetry tracker"))?;
+    let exporter = SpanExporter::builder().with_tonic().build()?;
+    let tracer_provider = opentelemetry_sdk::trace::TracerProvider::builder()
+        .with_resource(Resource::new(vec![
+            KeyValue::new(resource::K8S_DEPLOYMENT_NAME, "yakup"),
+            KeyValue::new(resource::SERVICE_NAME, "yakup"),
+        ]))
+        .with_batch_exporter(exporter, opentelemetry_sdk::runtime::Tokio)
+        .build();
+    let otel_tracer = tracer_provider.tracer("yakup");
     Ok(tracing_opentelemetry::layer().with_tracer(otel_tracer))
 }
 
