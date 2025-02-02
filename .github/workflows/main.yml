@@ -46,7 +46,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Run tests
-        uses: dagger/dagger-for-github@ad6a4e308a42fb2cf9be8b060f9aba9d57d4c9aa # v6
+        uses: dagger/dagger-for-github@f599d88d336fdf06f01f9bd24b6339954f7ba3e2 # v6
         with:
           version: "latest"
           verb: call
@@ -58,14 +58,14 @@ jobs:
           files: |
             target/junit.xml
       - name: Assemble manifests and push images
-        uses: dagger/dagger-for-github@ad6a4e308a42fb2cf9be8b060f9aba9d57d4c9aa # v6
+        uses: dagger/dagger-for-github@f599d88d336fdf06f01f9bd24b6339954f7ba3e2 # v6
         with:
           version: "latest"
           verb: call
           args: assemble "--image=${REGISTRY}/yakup" "--version=${VERSION}" --output=target/assemble
           cloud-token: "${{ secrets.DAGGER_CLOUD_TOKEN }}"
       - name: Save manifests for later deploy
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4
         with:
           name: manifests
           path: target/assemble/*.yaml
@@ -115,7 +115,7 @@ jobs:
       packages: write
     steps:
       - name: Cleanup main images
-        uses: dataaxiom/ghcr-cleanup-action@98b4022383d6ddb70ccbf6a378b4d8c67a60f066 # v1.0.13
+        uses: dataaxiom/ghcr-cleanup-action@cd0cdb900b5dbf3a6f2cc869f0dbb0b8211f50c4 # v1.0.16
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           package: yakup/yakup
@@ -126,7 +126,7 @@ jobs:
           delete-orphaned-images: true
           delete-partial-images: true
       - name: Cleanup old cache images
-        uses: dataaxiom/ghcr-cleanup-action@98b4022383d6ddb70ccbf6a378b4d8c67a60f066 # v1.0.13
+        uses: dataaxiom/ghcr-cleanup-action@cd0cdb900b5dbf3a6f2cc869f0dbb0b8211f50c4 # v1.0.16
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           package: yakup/cache
