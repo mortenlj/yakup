@@ -25,3 +25,9 @@ description = "Publish the project to ttl.sh"
 [tasks.push]
 run = "git push"
 depends = ["dtest", "publish"]
+
+[tasks.manifests]
+run = "dagger call assemble-manifests --output=target/deploy.yaml"
+
+[tasks.crd]
+run = "dagger call crd --output=target/crd"
