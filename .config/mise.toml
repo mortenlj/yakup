@@ -27,7 +27,7 @@ run = "git push"
 depends = ["dtest", "publish"]
 
 [tasks.manifests]
-run = "dagger call assemble-manifests --output=target/deploy.yaml"
+run = "dagger call assemble-manifests --output=${MISE_ORIGINAL_CWD}/target/deploy.yaml"
 
 [tasks.crd]
-run = "dagger call crd --output=target/crd"
+run = "dagger call crd --output=${MISE_ORIGINAL_CWD}/target/crd.yaml"
