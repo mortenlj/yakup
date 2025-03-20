@@ -127,6 +127,7 @@ pub struct FilesFromConfigMap {
     /// The name of the configmap to mount.
     pub name: String,
     /// The path to mount the configmap to.
+    /// The default value is /var/run/config/yakup.ibidem.no/<name>.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mount_path: Option<String>,
 }
@@ -137,6 +138,7 @@ pub struct FilesFromSecret {
     /// The name of the secret to mount.
     pub name: String,
     /// The path to mount the secret to.
+    /// The default value is /var/run/secrets/yakup.ibidem.no/<name>.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mount_path: Option<String>,
 }
@@ -144,7 +146,7 @@ pub struct FilesFromSecret {
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FilesFromEmptyDir {
-    /// The path to mount the configmap to.
+    /// The path to mount the emptydir to.
     pub mount_path: String,
 }
 
