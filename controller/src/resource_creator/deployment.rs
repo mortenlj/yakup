@@ -18,6 +18,9 @@ use api::application::v1::Application;
 use api::application::{Probe, Probes};
 use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 
+const DEFAULT_SECRET_MOUNT_PATH: &str = "/var/run/secrets/yakup.ibidem.no";
+const DEFAULT_CONFIGMAP_MOUNT_PATH: &str = "/var/run/config/yakup.ibidem.no";
+
 struct FromConfig {
     env_from: Option<Vec<EnvFromSource>>,
     volume_mounts: Option<Vec<VolumeMount>>,
@@ -86,7 +89,7 @@ fn generate_from_config(app: &Arc<Application>) -> FromConfig {
 
     for name in [format!("{}-db", app.name_any()), app.name_any()].iter() {
         env_from.extend(generate_env_from(name));
-        volume_mounts.extend(genereate_volume_mounts(name));
+        volume_mounts.extend(generate_volume_mounts(name));
         volumes.extend(generate_volumes(name));
     }
 
@@ -96,6 +99,41 @@ fn generate_from_config(app: &Arc<Application>) -> FromConfig {
         }
         if let Some(name) = &ef.secret {
             env_from.push(generate_env_from_secret(name))
+        }
+    }
+
+    let mut empty_dir_idx = 0;
+    for ff in app.spec.files_from.iter() {
+        if let Some(ffcm) = &ff.config_map {
+            let name = ffcm.name.as_str();
+            let mount_path: String = match &ffcm.mount_path {
+                Some(mount_path) => mount_path.to_owned(),
+                None => format!("{}/{}", DEFAULT_CONFIGMAP_MOUNT_PATH, name),
+            };
+            volume_mounts.push(generate_volume_mounts_from_configmap(
+                name,
+                mount_path.as_str(),
+            ));
+            volumes.push(generate_volume_for_configmap(name, None));
+        }
+        if let Some(ffs) = &ff.secret {
+            let name = ffs.name.as_str();
+            let mount_path: String = match &ffs.mount_path {
+                Some(mount_path) => mount_path.to_owned(),
+                None => format!("{}/{}", DEFAULT_SECRET_MOUNT_PATH, name),
+            };
+            volume_mounts.push(generate_volume_mounts_from_secret(
+                name,
+                mount_path.as_str(),
+            ));
+            volumes.push(generate_volume_for_secret(name, None));
+        }
+        if let Some(ffe) = &ff.empty_dir {
+            let name = format!("emptydir-{}", empty_dir_idx);
+            let mount_path = ffe.mount_path.as_str();
+            volume_mounts.push(generate_volume_mounts_from(name.clone(), mount_path, None));
+            volumes.push(generate_volume_for_empty_dir(name.as_str()));
+            empty_dir_idx += 1;
         }
     }
 
@@ -148,44 +186,85 @@ fn generate_probe(
 
 fn generate_volumes(app_name: &str) -> Vec<Volume> {
     vec![
-        Volume {
-            name: format!("{}-configmap", app_name.to_owned()),
-            config_map: Some(ConfigMapVolumeSource {
-                name: app_name.to_owned(),
-                optional: Some(true),
-                default_mode: Some(0o644),
-                ..Default::default()
-            }),
-            ..Default::default()
-        },
-        Volume {
-            name: format!("{}-secret", app_name.to_owned()),
-            secret: Some(SecretVolumeSource {
-                secret_name: Some(app_name.to_owned()),
-                optional: Some(true),
-                default_mode: Some(0o644),
-                ..Default::default()
-            }),
-            ..Default::default()
-        },
+        generate_volume_for_configmap(app_name, Some(true)),
+        generate_volume_for_secret(app_name, Some(true)),
     ]
 }
 
-fn genereate_volume_mounts(app_name: &str) -> Vec<VolumeMount> {
+fn generate_volume_for_configmap(name: &str, optional: Option<bool>) -> Volume {
+    Volume {
+        name: format!("{}-configmap", name.to_owned()),
+        config_map: Some(ConfigMapVolumeSource {
+            name: name.to_owned(),
+            optional,
+            default_mode: Some(0o644),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+fn generate_volume_for_secret(name: &str, optional: Option<bool>) -> Volume {
+    Volume {
+        name: format!("{}-secret", name.to_owned()),
+        secret: Some(SecretVolumeSource {
+            secret_name: Some(name.to_owned()),
+            optional,
+            default_mode: Some(0o644),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+fn generate_volume_for_empty_dir(name: &str) -> Volume {
+    Volume {
+        name: name.to_owned(),
+        empty_dir: Some(Default::default()),
+        ..Default::default()
+    }
+}
+
+fn generate_volume_mounts(app_name: &str) -> Vec<VolumeMount> {
     vec![
-        VolumeMount {
-            name: format!("{}-configmap", app_name.to_owned()),
-            mount_path: format!("/var/run/config/yakup.ibidem.no/{}", app_name.to_owned()),
-            read_only: Some(true),
-            ..Default::default()
-        },
-        VolumeMount {
-            name: format!("{}-secret", app_name.to_owned()),
-            mount_path: format!("/var/run/secrets/yakup.ibidem.no/{}", app_name.to_owned()),
-            read_only: Some(true),
-            ..Default::default()
-        },
+        generate_volume_mounts_from_configmap(
+            app_name,
+            &format!("{}/{}", DEFAULT_CONFIGMAP_MOUNT_PATH, app_name.to_owned()),
+        ),
+        generate_volume_mounts_from_secret(
+            app_name,
+            &format!("{}/{}", DEFAULT_SECRET_MOUNT_PATH, app_name.to_owned()),
+        ),
     ]
+}
+
+fn generate_volume_mounts_from_configmap(name: &str, mount_path: &str) -> VolumeMount {
+    generate_volume_mounts_from(
+        format!("{}-{}", name.to_owned(), "configmap"),
+        mount_path,
+        Some(true),
+    )
+}
+
+fn generate_volume_mounts_from_secret(name: &str, mount_path: &str) -> VolumeMount {
+    generate_volume_mounts_from(
+        format!("{}-{}", name.to_owned(), "secret"),
+        mount_path,
+        Some(true),
+    )
+}
+
+fn generate_volume_mounts_from(
+    name: String,
+    mount_path: &str,
+    read_only: Option<bool>,
+) -> VolumeMount {
+    VolumeMount {
+        name,
+        mount_path: mount_path.to_owned(),
+        read_only,
+        ..Default::default()
+    }
 }
 
 fn generate_env_from_configmap(name: &str) -> EnvFromSource {

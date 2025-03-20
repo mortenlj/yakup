@@ -34,6 +34,21 @@ app_spec:
   envFrom:
     - configMap: test-config-map
     - secret: test-secret
+  filesFrom:
+    - secret:
+        name: my-other-secret
+        mountPath: /somewhere
+    - secret:
+        name: at-default-mount-path
+    - configMap:
+        name: my-third-cm
+        mountPath: /config
+    - configMap:
+        name: at-default-mount-path
+    - emptyDir:
+        mountPath: /tmp
+    - emptyDir:
+        mountPath: /mnt
   resources:
     limits:
       memory: 128Mi
@@ -148,27 +163,73 @@ operations:
                   - mountPath: /var/run/secrets/yakup.ibidem.no/test-app
                     name: test-app-secret
                     readOnly: true
+                  - mountPath: /somewhere
+                    name: my-other-secret-secret
+                    readOnly: true
+                  - mountPath: /var/run/secrets/yakup.ibidem.no/at-default-mount-path
+                    name: at-default-mount-path-secret
+                    readOnly: true
+                  - mountPath: /config
+                    name: my-third-cm-configmap
+                    readOnly: true
+                  - mountPath: /var/run/config/yakup.ibidem.no/at-default-mount-path
+                    name: at-default-mount-path-configmap
+                    readOnly: true
+                  - mountPath: /tmp
+                    name: emptydir-0
+                  - mountPath: /mnt
+                    name: emptydir-1
             volumes:
-              - configMap:
+              - name: test-app-db-configmap
+                configMap:
+                  defaultMode: 0o644
                   name: test-app-db
                   optional: true
+
+              - name: test-app-db-secret
+                secret:
                   defaultMode: 0o644
-                name: test-app-db-configmap
-              - secret:
                   secretName: test-app-db
                   optional: true
+
+              - name: test-app-configmap
+                configMap:
                   defaultMode: 0o644
-                name: test-app-db-secret
-              - configMap:
                   name: test-app
                   optional: true
+
+              - name: test-app-secret
+                secret:
                   defaultMode: 0o644
-                name: test-app-configmap
-              - secret:
                   secretName: test-app
                   optional: true
+
+              - name: my-other-secret-secret
+                secret:
                   defaultMode: 0o644
-                name: test-app-secret
+                  secretName: my-other-secret
+
+              - name: at-default-mount-path-secret
+                secret:
+                  defaultMode: 0o644
+                  secretName: at-default-mount-path
+
+              - name: my-third-cm-configmap
+                configMap:
+                  defaultMode: 0o644
+                  name: my-third-cm
+
+              - name: at-default-mount-path-configmap
+                configMap:
+                  defaultMode: 0o644
+                  name: at-default-mount-path
+
+              - name: emptydir-0
+                emptyDir: {}
+
+              - name: emptydir-1
+                emptyDir: {}
+
   - operation: CreateOrUpdate
     object:
       apiVersion: v1

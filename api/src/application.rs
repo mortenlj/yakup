@@ -32,6 +32,12 @@ pub mod v1 {
         #[serde(skip_serializing_if = "Vec::is_empty")]
         pub env_from: Vec<EnvFrom>,
 
+        /// Mount files from the listed sources.
+        /// A source can be either a configmap, a secret, or an emptyDir.
+        #[serde(default)]
+        #[serde(skip_serializing_if = "Vec::is_empty")]
+        pub files_from: Vec<FilesFrom>,
+
         /// The image to run.
         pub image: String,
 
@@ -48,22 +54,6 @@ pub mod v1 {
         #[serde(default)]
         #[serde(skip_serializing_if = "Option::is_none")]
         pub resources: Option<ResourceRequirements>,
-        //     filesFrom:
-        //       - secret:
-        //           name: my-other-secret
-        //           mountPath: /somewhere
-        //       - configMap:
-        //           name: my-third-cm
-        //           mountPath: /config
-        //       - emptyDir:
-        //           medium: Memory
-        //           mountPath: /tmp
-        //       - emptyDir:
-        //           medium: Disk
-        //           mountPath: /mnt
-        //       - persistentVolumeClaim:
-        //           name: my-pvc
-        //           mountPath: /tmp
         //   replicas:
         //     min: 1
         //     max: 5
@@ -118,6 +108,44 @@ pub struct EnvFrom {
     /// Keys that are not valid environment variable names will be skipped.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub secret: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FilesFrom {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub config_map: Option<FilesFromConfigMap>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secret: Option<FilesFromSecret>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub empty_dir: Option<FilesFromEmptyDir>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FilesFromConfigMap {
+    /// The name of the configmap to mount.
+    pub name: String,
+    /// The path to mount the configmap to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mount_path: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FilesFromSecret {
+    /// The name of the secret to mount.
+    pub name: String,
+    /// The path to mount the secret to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mount_path: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FilesFromEmptyDir {
+    /// The path to mount the configmap to.
+    pub mount_path: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, JsonSchema)]
