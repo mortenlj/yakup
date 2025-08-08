@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use k8s_openapi::api::apps::v1::{Deployment, DeploymentSpec};
 use k8s_openapi::api::core::v1::{
-    ConfigMapEnvSource, ConfigMapVolumeSource, Container, ContainerPort, EnvFromSource,
-    HTTPGetAction, PodSpec, PodTemplateSpec, SecretEnvSource, SecretVolumeSource, TCPSocketAction,
-    Volume, VolumeMount,
+    Affinity, ConfigMapEnvSource, ConfigMapVolumeSource, Container, ContainerPort, EnvFromSource,
+    HTTPGetAction, PodAffinityTerm, PodAntiAffinity, PodSpec, PodTemplateSpec, SecretEnvSource,
+    SecretVolumeSource, TCPSocketAction, Volume, VolumeMount, WeightedPodAffinityTerm,
 };
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta};
 use kube::ResourceExt;
@@ -37,7 +37,7 @@ pub(crate) fn process(
     let deployment = Deployment {
         metadata: object_meta,
         spec: Some(DeploymentSpec {
-            replicas: Some(1),
+            replicas: Some(2),
             selector: LabelSelector {
                 match_labels: Some(labels.clone()),
                 ..Default::default()
@@ -48,6 +48,25 @@ pub(crate) fn process(
                     ..Default::default()
                 }),
                 spec: Some(PodSpec {
+                    affinity: Some(Affinity {
+                        pod_anti_affinity: Some(PodAntiAffinity {
+                            preferred_during_scheduling_ignored_during_execution: Some(vec![
+                                WeightedPodAffinityTerm {
+                                    weight: 100,
+                                    pod_affinity_term: PodAffinityTerm {
+                                        label_selector: Some(LabelSelector {
+                                            match_labels: Some(labels.clone()),
+                                            ..Default::default()
+                                        }),
+                                        topology_key: "kubernetes.io/hostname".to_string(),
+                                        ..Default::default()
+                                    },
+                                },
+                            ]),
+                            required_during_scheduling_ignored_during_execution: None,
+                        }),
+                        ..Default::default()
+                    }),
                     service_account_name: Some(app.name_any().clone()),
                     containers: vec![Container {
                         name: app.name_any().clone(),
