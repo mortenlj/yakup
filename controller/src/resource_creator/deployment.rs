@@ -34,10 +34,22 @@ pub(crate) fn process(
     labels: BTreeMap<String, String>,
 ) -> Result<Vec<Operation>> {
     let from_config = generate_from_config(app);
+
+    // Default to 2 replicas for HTTP applications, 1 for others
+    let replicas = if let Some(ports) = &app.spec.ports {
+        if let Some(_http_port) = &ports.http {
+            2 // Default to 2 replicas for HTTP applications
+        } else {
+            1 // Default to 1 replica for non-HTTP applications
+        }
+    } else {
+        1 // Default to 1 replica if no ports are defined
+    };
+
     let deployment = Deployment {
         metadata: object_meta,
         spec: Some(DeploymentSpec {
-            replicas: Some(2),
+            replicas: Some(replicas),
             selector: LabelSelector {
                 match_labels: Some(labels.clone()),
                 ..Default::default()
