@@ -36,14 +36,13 @@ pub(crate) fn process(
     let from_config = generate_from_config(app);
 
     // Default to 2 replicas for HTTP applications, 1 for others
-    let replicas = if let Some(ports) = &app.spec.ports {
-        if let Some(_http_port) = &ports.http {
-            2 // Default to 2 replicas for HTTP applications
-        } else {
-            1 // Default to 1 replica for non-HTTP applications
+    let mut replicas = 1;
+    if let Some(ports) = &app.spec.ports {
+        if let Some(http_port) = &ports.http {
+            if http_port.ingress.len() > 0 {
+                replicas = 2 // Default to 2 replicas for HTTP applications with ingress
+            }
         }
-    } else {
-        1 // Default to 1 replica if no ports are defined
     };
 
     let deployment = Deployment {
