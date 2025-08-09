@@ -13,7 +13,7 @@ tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
 api = { path = "../api" }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["json", "env-filter"] }
-tracing-opentelemetry = "0.28.0"
+tracing-opentelemetry = "0.31.0"
 opentelemetry-otlp = { version = "0.27.0", features = ["tokio"] }
 opentelemetry = { version = "0.27.1", features = ["trace"] }
 opentelemetry_sdk = { version = "0.27.1", features = ["rt-tokio"] }
