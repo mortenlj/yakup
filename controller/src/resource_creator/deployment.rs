@@ -39,7 +39,7 @@ pub(crate) fn process(
     let mut replicas = 1;
     if let Some(ports) = &app.spec.ports {
         if let Some(http_port) = &ports.http {
-            if http_port.ingress.len() > 0 {
+            if !http_port.ingress.is_empty() {
                 replicas = 2 // Default to 2 replicas for HTTP applications with ingress
             }
         }
