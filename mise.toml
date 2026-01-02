@@ -1,0 +1,38 @@
+[task_config]
+includes = [".config/mise-lib/virtual_tasks.toml", ".config/mise-lib"]
+
+[tasks.test]
+depends = ["rust:test"]
+description = "Run tests"
+
+[tasks.fmt]
+depends = ["rust:fmt"]
+description = "Format source"
+
+[tasks.fmt-check]
+depends = ["rust:fmt-check"]
+description = "Check formatting"
+
+[tasks.lint]
+depends = ["rust:lint"]
+description = "Lint the project"
+
+[tasks.lint-fix]
+depends = ["rust:lint-fix"]
+description = "Run lint fixers"
+
+[tasks.ci]
+depends = ["test", "fmt-check", "lint"]
+description = "Run CI tasks"
+
+[tasks.build]
+depends = ["rust:build"]
+description = "Build the project in debug mode"
+sources = ["src/**/*.rs", "Cargo.lock", "Cargo.toml"]
+outputs = ["target/debug/yakup"]
+
+[tasks.release-build]
+depends = ["rust:release-build"]
+description = "Build the project"
+sources = ["src/**/*.rs", "Cargo.lock", "Cargo.toml"]
+outputs = ["target/release/yakup.*.aarch64-unknown-linux-gnu", "target/release/yakup.*.armv7-unknown-linux-gnueabihf", "target/release/yakup.*.x86_64-unknown-linux-gnu"]
