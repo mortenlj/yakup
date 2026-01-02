@@ -28,11 +28,11 @@ description = "Run CI tasks"
 [tasks.build]
 depends = ["rust:build"]
 description = "Build the project in debug mode"
-sources = ["src/**/*.rs", "Cargo.lock", "Cargo.toml"]
+sources = ["api/src/**/*.rs", "controller/src/**/*.rs", "**/Cargo.lock", "**/Cargo.toml"]
 outputs = ["target/debug/yakup"]
 
 [tasks.release-build]
 depends = ["rust:release-build"]
 description = "Build the project"
-sources = ["src/**/*.rs", "Cargo.lock", "Cargo.toml"]
+sources = ["api/src/**/*.rs", "controller/src/**/*.rs", "**/Cargo.lock", "**/Cargo.toml"]
 outputs = ["target/release/yakup.*.aarch64-unknown-linux-gnu", "target/release/yakup.*.armv7-unknown-linux-gnueabihf", "target/release/yakup.*.x86_64-unknown-linux-gnu"]
