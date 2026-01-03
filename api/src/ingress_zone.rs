@@ -1,6 +1,6 @@
 use kube::CustomResource;
-use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 pub mod v1 {
     use super::*;
