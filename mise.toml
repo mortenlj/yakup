@@ -36,3 +36,15 @@ depends = ["rust:release-build"]
 description = "Build the project"
 sources = ["api/src/**/*.rs", "controller/src/**/*.rs", "**/Cargo.lock", "**/Cargo.toml"]
 outputs = ["target/release/yakup.*.aarch64-unknown-linux-gnu", "target/release/yakup.*.armv7-unknown-linux-gnueabihf", "target/release/yakup.*.x86_64-unknown-linux-gnu"]
+
+[tasks.generate-crd-manifests]
+depends = ["rust:build"]
+description = "Generates the CRD manifests"
+sources = ["api/src/**/*.rs", "api/Cargo.lock", "**/Cargo.toml"]
+outputs = ["target/assemble/manifests.yaml"]
+run = """
+cargo run --bin crd
+output_directory="${MISE_CONFIG_ROOT}/mise-output/"
+mkdir --parents "${output_directory}"
+mv target/crd/manifests.yaml "${output_directory}"
+"""
