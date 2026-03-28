@@ -35,7 +35,7 @@ outputs = ["target/debug/yakup"]
 depends = ["rust:release-build"]
 description = "Build the project"
 sources = ["api/src/**/*.rs", "controller/src/**/*.rs", "**/Cargo.lock", "**/Cargo.toml"]
-outputs = ["target/release/yakup.*.aarch64-unknown-linux-gnu", "target/release/yakup.*.armv7-unknown-linux-gnueabihf", "target/release/yakup.*.x86_64-unknown-linux-gnu"]
+outputs = ["target/release/yakup.*.aarch64-unknown-linux-musl", "target/release/yakup.*.armv7-unknown-linux-musleabihf", "target/release/yakup.*.x86_64-unknown-linux-musl"]
 
 [tasks.generate-crd-manifests]
 depends = ["rust:build"]
