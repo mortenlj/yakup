@@ -1,0 +1,69 @@
+name: yakup
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    uses: mortenlj/mise-lib/.github/workflows/setup.yaml@main
+
+  build:
+    permissions:
+      packages: write
+      checks: write
+      pull-requests: write
+    needs: setup
+    uses: mortenlj/mise-lib/.github/workflows/build-docker.yaml@main
+    with:
+      main-image: ghcr.io/${{ github.repository }}
+      clean-version: ${{ fromJSON(needs.setup.outputs.clean-version) }}
+      tool-versions: ${{ needs.setup.outputs.tool-versions }}
+      manifests-task: ${{ needs.setup.outputs.manifests-task }}
+    secrets:
+      GHCR_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    name: Deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # This is required for requesting the JWT
+    needs:
+      - setup
+      - build
+    steps:
+      - name: Download manifests from build
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: manifests
+      - name: Get kubeconfig
+        uses: mortenlj/kube-actions/get-kubeconfig@main
+      - id: join-zt
+        name: Join ZeroTier network
+        uses: mortenlj/zerotier-actions/join-zt@main
+        with:
+          network_id: ${{ secrets.ZEROTIER_NETWORK_ID }}
+          api_accesstoken: ${{ secrets.ZEROTIER_API_ACCESSTOKEN }}
+          ping_target: k3s.home.ibidem.no
+      - name: Run kubectl apply
+        run: |
+          kubectl apply --filename=manifests.yaml --wait=true --timeout=60s
+          kubectl apply --namespace=ibidem-system --filename=deploy.yaml --selector=app=yakup --prune=true --wait=true --timeout=60s
+      - name: Leave ZeroTier network
+        if: always()
+        uses: mortenlj/zerotier-actions/leave-zt@main
+        with:
+          node_id: ${{ steps.join-zt.outputs.node_id }}
+          network_id: ${{ secrets.ZEROTIER_NETWORK_ID }}
+          api_accesstoken: ${{ secrets.ZEROTIER_API_ACCESSTOKEN }}
+
+  cleanup:
+    permissions:
+      packages: write
+    needs: build
+    uses: mortenlj/mise-lib/.github/workflows/cleanup.yaml@main
