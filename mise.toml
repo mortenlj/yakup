@@ -38,13 +38,24 @@ sources = ["api/src/**/*.rs", "controller/src/**/*.rs", "**/Cargo.lock", "**/Car
 outputs = ["target/release/yakup.*.aarch64-unknown-linux-musl", "target/release/yakup.*.armv7-unknown-linux-musleabihf", "target/release/yakup.*.x86_64-unknown-linux-musl"]
 
 [tasks.generate-crd-manifests]
-depends = ["rust:build"]
+depends = ["rust:setup"]
 description = "Generates the CRD manifests"
 sources = ["api/src/**/*.rs", "api/Cargo.lock", "**/Cargo.toml"]
-outputs = ["target/assemble/manifests.yaml"]
+outputs = ["{{ config_root }}/mise-output/manifests.yaml"]
 run = """
 cargo run --bin crd
 output_directory="${MISE_CONFIG_ROOT}/mise-output/"
 mkdir --parents "${output_directory}"
 mv target/crd/manifests.yaml "${output_directory}"
+"""
+
+[tasks.manifests]
+description = "Generate all manifests needed for deploy"
+outputs = ["${MISE_CONFIG_ROOT}/mise-output/*.yaml"]
+usage = '''
+arg "<image>" help="Image to use in manifests"
+'''
+run = """
+    mise run k8s:manifests ${usage_image}
+    mise run generate-crd-manifests
 """
