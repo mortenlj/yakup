@@ -5,7 +5,7 @@ use k8s_openapi::api::apps::v1::{Deployment, DeploymentSpec};
 use k8s_openapi::api::core::v1::{
     Affinity, ConfigMapEnvSource, ConfigMapVolumeSource, Container, ContainerPort, EnvFromSource,
     HTTPGetAction, PodAffinityTerm, PodAntiAffinity, PodSpec, PodTemplateSpec, SecretEnvSource,
-    SecretVolumeSource, TCPSocketAction, Volume, VolumeMount, WeightedPodAffinityTerm,
+    SecretVolumeSource, TCPSocketAction, Volume, VolumeMount,
 };
 use k8s_openapi::apimachinery::pkg::apis::meta::v1::{LabelSelector, ObjectMeta};
 use kube::ResourceExt;
@@ -61,20 +61,17 @@ pub(crate) fn process(
                 spec: Some(PodSpec {
                     affinity: Some(Affinity {
                         pod_anti_affinity: Some(PodAntiAffinity {
-                            preferred_during_scheduling_ignored_during_execution: Some(vec![
-                                WeightedPodAffinityTerm {
-                                    weight: 100,
-                                    pod_affinity_term: PodAffinityTerm {
-                                        label_selector: Some(LabelSelector {
-                                            match_labels: Some(labels.clone()),
-                                            ..Default::default()
-                                        }),
-                                        topology_key: "kubernetes.io/hostname".to_string(),
+                            preferred_during_scheduling_ignored_during_execution: None,
+                            required_during_scheduling_ignored_during_execution: Some(vec![
+                                PodAffinityTerm {
+                                    label_selector: Some(LabelSelector {
+                                        match_labels: Some(labels.clone()),
                                         ..Default::default()
-                                    },
+                                    }),
+                                    topology_key: "kubernetes.io/hostname".to_string(),
+                                    ..Default::default()
                                 },
                             ]),
-                            required_during_scheduling_ignored_during_execution: None,
                         }),
                         ..Default::default()
                     }),
